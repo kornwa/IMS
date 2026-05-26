@@ -497,7 +497,7 @@ textarea.fc{resize:vertical;min-height:72px}
     </div>
     <span class="lb-icon" id="loginIconEmoji">⚙️</span>
     <div class="lb-badge"><span>🔐 ADMIN ACCESS</span></div>
-    <div class="lb-title" id="loginAppName">Admin Panel</div>
+    <div class="lb-title" id="loginAppName">ระบบเบิกวัสดุคลัง</div>
     <div class="lb-sub">ระบบเบิกวัสดุคลัง v5.2</div>
     <div class="lb-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
     <label class="lbl">รหัสผ่าน Admin</label>
@@ -515,7 +515,7 @@ textarea.fc{resize:vertical;min-height:72px}
   <nav class="sb">
     <div class="sb-head">
       <div class="sb-logo" id="sidebarLogo">⚙️</div>
-      <div class="sb-name" id="sidebarAppName">Admin Panel</div>
+      <div class="sb-name" id="sidebarAppName">ระบบเบิกวัสดุคลัง</div>
       <div class="sb-role">🔐 ADMINISTRATOR</div>
     </div>
     <div class="sb-nav">
@@ -784,7 +784,7 @@ textarea.fc{resize:vertical;min-height:72px}
               </div>
               <div class="fg">
                 <label class="fl">ชื่อแอป (แสดงใน Sidebar &amp; หน้า Login)</label>
-                <input class="fc" id="appNameInput" placeholder="Admin Panel" value="Admin Panel">
+                <input class="fc" id="appNameInput" placeholder="เช่น CDC ระบบเบิกวัสดุ" value="">
               </div>
               <button class="btn b-suc b-sm" onclick="saveAppBranding()">💾 บันทึกการตั้งค่า</button>
             </div>
@@ -1070,7 +1070,7 @@ const DEMO = {
   ],
   logs: [],
   pw: '123456',
-  branding: { logoUrl:'', appName:'Admin Panel' },
+  branding: { logoUrl:'', appName:'ระบบเบิกวัสดุคลัง' },
   // Demo notification state
   notify: {
     lineToken: '',
@@ -2185,7 +2185,7 @@ async function processLogoFile(file) {
       showL(false);
       currentLogoDataUrl = resized;
       applyLogoPreview(resized, file.name);
-      applyBrandingToUI(resized, document.getElementById('appNameInput')?.value || 'Admin Panel');
+      applyBrandingToUI(resized, document.getElementById('appNameInput')?.value || 'ระบบเบิกวัสดุคลัง');
       toast('✅ โหลดโลโก้แล้ว (Demo)', 'ok');
       return;
     }
@@ -2198,7 +2198,7 @@ async function processLogoFile(file) {
     if (res.success) {
       currentLogoDataUrl = res.url;
       applyLogoPreview(res.url, file.name);
-      applyBrandingToUI(res.url, document.getElementById('appNameInput')?.value || 'Admin Panel');
+      applyBrandingToUI(res.url, document.getElementById('appNameInput')?.value || 'ระบบเบิกวัสดุคลัง');
       await saveAppBranding();
     } else {
       toast('❌ ' + (res.error || 'อัปโหลดล้มเหลว'), 'er');
@@ -2234,14 +2234,14 @@ async function removeLogo() {
     const fname = document.getElementById('logoFileName'); if (fname) fname.textContent = 'ยังไม่ได้ตั้งโลโก้';
     const removeBtn = document.getElementById('logoRemoveBtn'); if (removeBtn) removeBtn.style.display = 'none';
     document.getElementById('logoUrlInput').value = '';
-    const appName = document.getElementById('appNameInput')?.value || 'Admin Panel';
+    const appName = document.getElementById('appNameInput')?.value || 'ระบบเบิกวัสดุคลัง';
     localStorage.setItem('app_branding', JSON.stringify({ logoUrl: '', appName }));
     applyBrandingToUI('', appName);
     toast('🗑️ ลบโลโก้แล้ว', 'in');
   } catch (e) { showL(false); toast('ลบไม่สำเร็จ: ' + e.message, 'er'); }
 }
 async function saveAppBranding() {
-  const appName = document.getElementById('appNameInput')?.value.trim() || 'Admin Panel';
+  const appName = document.getElementById('appNameInput')?.value.trim() || 'ระบบเบิกวัสดุคลัง';
   const urlInput = document.getElementById('logoUrlInput')?.value.trim();
   const logoUrl = urlInput || currentLogoDataUrl || '';
   showL(true, 'กำลังบันทึก...');
@@ -2260,14 +2260,16 @@ async function loadBranding(){
     cached=JSON.parse(localStorage.getItem('app_branding')||'{}');
     if(cached.logoUrl){currentLogoDataUrl=cached.logoUrl;applyLogoPreview(cached.logoUrl,'โลโก้ปัจจุบัน');}
     if(cached.appName){const el=document.getElementById('appNameInput');if(el)el.value=cached.appName;}
-    applyBrandingToUI(cached.logoUrl||'',cached.appName||'Admin Panel');
+    const cName=cached.appName&&cached.appName!=='Admin Panel'?cached.appName:'ระบบเบิกวัสดุคลัง';
+    applyBrandingToUI(cached.logoUrl||'',cName);
   }catch(e){}
   // sync จาก GAS — ใช้ค่าจาก GAS ถ้ามี ไม่งั้น fallback cache
   try{
     const raw=await GS.call('getBranding');
     const data=typeof raw==='string'?JSON.parse(raw):raw;
     const logoUrl=data.logoUrl||cached.logoUrl||'';
-    const appName=data.appName||cached.appName||'Admin Panel';
+    const rawName=data.appName||cached.appName||'';
+    const appName=(rawName&&rawName!=='Admin Panel')?rawName:'ระบบเบิกวัสดุคลัง';
     if(logoUrl){currentLogoDataUrl=logoUrl;applyLogoPreview(logoUrl,'โลโก้ปัจจุบัน');}
     const el=document.getElementById('appNameInput');if(el)el.value=appName;
     applyBrandingToUI(logoUrl,appName);
@@ -2276,7 +2278,7 @@ async function loadBranding(){
 }
 // ═══ APPLY BRANDING TO UI — อัปเดตโลโก้ & ชื่อแอปทั่วทั้งหน้า Admin ═══
 function applyBrandingToUI(logoUrl, appName) {
-  const name = appName || 'Admin Panel';
+  const name = appName || 'ระบบเบิกวัสดุคลัง';
  
   // ── อัปเดต Sidebar ──
   const sbLogo = document.getElementById('sidebarLogo');
