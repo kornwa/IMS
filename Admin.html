@@ -2255,20 +2255,23 @@ async function saveAppBranding() {
 }
 async function loadBranding(){
   // โชว์ cache ทันทีก่อน GAS ตอบ
+  let cached={};
   try{
-    const cached=JSON.parse(localStorage.getItem('app_branding')||'{}');
+    cached=JSON.parse(localStorage.getItem('app_branding')||'{}');
     if(cached.logoUrl){currentLogoDataUrl=cached.logoUrl;applyLogoPreview(cached.logoUrl,'โลโก้ปัจจุบัน');}
     if(cached.appName){const el=document.getElementById('appNameInput');if(el)el.value=cached.appName;}
     applyBrandingToUI(cached.logoUrl||'',cached.appName||'Admin Panel');
   }catch(e){}
-  // sync จาก backend แล้วอัปเดต cache
+  // sync จาก GAS — ใช้ค่าจาก GAS ถ้ามี ไม่งั้น fallback cache
   try{
     const raw=await GS.call('getBranding');
     const data=typeof raw==='string'?JSON.parse(raw):raw;
-    if(data.logoUrl){currentLogoDataUrl=data.logoUrl;applyLogoPreview(data.logoUrl,'โลโก้ปัจจุบัน');}
-    if(data.appName){const el=document.getElementById('appNameInput');if(el)el.value=data.appName;}
-    applyBrandingToUI(data.logoUrl||'',data.appName||'Admin Panel');
-    localStorage.setItem('app_branding',JSON.stringify({logoUrl:data.logoUrl||'',appName:data.appName||'Admin Panel'}));
+    const logoUrl=data.logoUrl||cached.logoUrl||'';
+    const appName=data.appName||cached.appName||'Admin Panel';
+    if(logoUrl){currentLogoDataUrl=logoUrl;applyLogoPreview(logoUrl,'โลโก้ปัจจุบัน');}
+    const el=document.getElementById('appNameInput');if(el)el.value=appName;
+    applyBrandingToUI(logoUrl,appName);
+    localStorage.setItem('app_branding',JSON.stringify({logoUrl,appName}));
   }catch(e){}
 }
 // ═══ APPLY BRANDING TO UI — อัปเดตโลโก้ & ชื่อแอปทั่วทั้งหน้า Admin ═══
