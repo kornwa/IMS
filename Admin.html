@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#e85d04">
 <title>Admin Panel — ระบบเบิกวัสดุ</title>
+<link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1214,7 +1215,18 @@ async function doLogin(){
   }finally{btn.disabled=false;btn.innerHTML='🔓 เข้าสู่ระบบ Admin';}
 }
 function showErr(msg){const el=document.getElementById('loginErr');el.textContent=msg;el.classList.add('show');}
-function logout(){sessionStorage.removeItem('adm_auth');document.getElementById('adminApp').classList.remove('show');document.getElementById('loginScreen').classList.remove('hide');document.getElementById('pwInput').value='';document.getElementById('loginErr').classList.remove('show');_pwVisible=false;const inp=document.getElementById('pwInput');if(inp)inp.type='password';const btn=document.getElementById('eyeBtn');if(btn)btn.textContent='👁️';}
+function logout(){
+  setTimeout(()=>{
+    sessionStorage.removeItem('adm_auth');
+    document.getElementById('adminApp').classList.remove('show');
+    document.getElementById('loginScreen').classList.remove('hide');
+    document.getElementById('pwInput').value='';
+    document.getElementById('loginErr').classList.remove('show');
+    _pwVisible=false;
+    const inp=document.getElementById('pwInput');if(inp)inp.type='password';
+    const btn=document.getElementById('eyeBtn');if(btn)btn.textContent='👁️';
+  },0);
+}
 function goUser(){window.open(window.location.origin+'/','_blank');}
 
 async function bootApp(){
@@ -2280,8 +2292,10 @@ function applyBrandingToUI(logoUrl, appName) {
   }
   if (loginName) loginName.textContent = name;
  
-  // ── อัปเดต Title ──
+  // ── อัปเดต Title & Favicon ──
   document.title = name + ' — ระบบเบิกวัสดุ';
+  const fav = document.getElementById('favicon');
+  if (fav) fav.href = logoUrl || "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>";
 }
 // ═══ MODAL / TOAST / LOAD ═══
 function OM(id){document.getElementById(id).classList.add('show');}
