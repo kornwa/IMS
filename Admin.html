@@ -2196,10 +2196,10 @@ async function processLogoFile(file) {
     showL(false);
 
     if (res.success) {
-      currentLogoDataUrl = res.url;                 // เก็บเป็น URL ไม่ใช่ data URL
+      currentLogoDataUrl = res.url;
       applyLogoPreview(res.url, file.name);
       applyBrandingToUI(res.url, document.getElementById('appNameInput')?.value || 'Admin Panel');
-      toast('✅ ' + (res.message || 'อัปโหลดสำเร็จ — มีผลทั้งหน้าบ้าน/หลังบ้านแล้ว'), 'ok');
+      await saveAppBranding();
     } else {
       toast('❌ ' + (res.error || 'อัปโหลดล้มเหลว'), 'er');
     }
@@ -2234,30 +2234,41 @@ async function removeLogo() {
     const fname = document.getElementById('logoFileName'); if (fname) fname.textContent = 'ยังไม่ได้ตั้งโลโก้';
     const removeBtn = document.getElementById('logoRemoveBtn'); if (removeBtn) removeBtn.style.display = 'none';
     document.getElementById('logoUrlInput').value = '';
-    applyBrandingToUI('', document.getElementById('appNameInput')?.value || 'Admin Panel');
+    const appName = document.getElementById('appNameInput')?.value || 'Admin Panel';
+    localStorage.setItem('app_branding', JSON.stringify({ logoUrl: '', appName }));
+    applyBrandingToUI('', appName);
     toast('🗑️ ลบโลโก้แล้ว', 'in');
   } catch (e) { showL(false); toast('ลบไม่สำเร็จ: ' + e.message, 'er'); }
 }
 async function saveAppBranding() {
   const appName = document.getElementById('appNameInput')?.value.trim() || 'Admin Panel';
+  const urlInput = document.getElementById('logoUrlInput')?.value.trim();
+  const logoUrl = urlInput || currentLogoDataUrl || '';
   showL(true, 'กำลังบันทึก...');
   try {
-    // ส่ง logoUrl ปัจจุบันไปด้วย (ถ้ายังไม่ได้อัปโหลด/เป็น URL จาก input)
-    const urlInput = document.getElementById('logoUrlInput')?.value.trim();
-    const logoUrl = urlInput || currentLogoDataUrl || '';
-    await GS.call('saveBranding', JSON.stringify({ logoUrl, appName }));
+    if (!isDemo) await GS.call('saveBranding', JSON.stringify({ logoUrl, appName }));
+    localStorage.setItem('app_branding', JSON.stringify({ logoUrl, appName }));
     showL(false);
-    toast('✅ บันทึกสำเร็จ — หน้าผู้ใช้ refresh แล้วจะเห็นทันที', 'ok');
+    toast('✅ บันทึกสำเร็จ', 'ok');
     applyBrandingToUI(logoUrl, appName);
   } catch (e) { showL(false); toast('เกิดข้อผิดพลาด: ' + e.message, 'er'); }
 }
 async function loadBranding(){
+  // โชว์ cache ทันทีก่อน GAS ตอบ
+  try{
+    const cached=JSON.parse(localStorage.getItem('app_branding')||'{}');
+    if(cached.logoUrl){currentLogoDataUrl=cached.logoUrl;applyLogoPreview(cached.logoUrl,'โลโก้ปัจจุบัน');}
+    if(cached.appName){const el=document.getElementById('appNameInput');if(el)el.value=cached.appName;}
+    applyBrandingToUI(cached.logoUrl||'',cached.appName||'Admin Panel');
+  }catch(e){}
+  // sync จาก backend แล้วอัปเดต cache
   try{
     const raw=await GS.call('getBranding');
     const data=typeof raw==='string'?JSON.parse(raw):raw;
     if(data.logoUrl){currentLogoDataUrl=data.logoUrl;applyLogoPreview(data.logoUrl,'โลโก้ปัจจุบัน');}
     if(data.appName){const el=document.getElementById('appNameInput');if(el)el.value=data.appName;}
     applyBrandingToUI(data.logoUrl||'',data.appName||'Admin Panel');
+    localStorage.setItem('app_branding',JSON.stringify({logoUrl:data.logoUrl||'',appName:data.appName||'Admin Panel'}));
   }catch(e){}
 }
 // ═══ APPLY BRANDING TO UI — อัปเดตโลโก้ & ชื่อแอปทั่วทั้งหน้า Admin ═══
