@@ -1042,12 +1042,7 @@ function doLogout(){
 }
 
 function goAdmin(){
-  if (hasGS) {
-    gsCall('getScriptUrl').then(url => window.open(url + '?page=admin', '_blank'))
-      .catch(() => window.open(window.location.href.split('?')[0] + '?page=admin', '_blank'));
-  } else {
-    window.open(window.location.href.split('?')[0] + '?page=admin', '_blank');
-  }
+  window.open(window.location.origin + '/admin', '_blank');
 }
 
 // ─── Page Navigation ────────────────────────────────────────

@@ -498,11 +498,6 @@ textarea.fc{resize:vertical;min-height:72px}
     <div class="lb-badge"><span>🔐 ADMIN ACCESS</span></div>
     <div class="lb-title" id="loginAppName">Admin Panel</div>
     <div class="lb-sub">ระบบเบิกวัสดุคลัง v5.2</div>
-    <div class="pw-hint" id="demoHint">
-      🔑 รหัสผ่านเริ่มต้น:&nbsp;
-      <strong id="hintPw" style="font-family:'IBM Plex Mono',monospace;letter-spacing:1px">••••••</strong>
-      <button onclick="toggleHintPw()" id="hintToggleBtn" style="margin-left:8px;background:none;border:1px solid #fed7aa;border-radius:5px;padding:1px 8px;font-size:11px;color:#b45309;cursor:pointer;font-family:'Sarabun',sans-serif">👁️ ดู</button>
-    </div>
     <div class="lb-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
     <label class="lbl">รหัสผ่าน Admin</label>
     <div style="position:relative;margin-bottom:13px">
@@ -1199,14 +1194,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══ PASSWORD UI ═══
-let _hintVisible=false, _pwVisible=false, _tokenVisible=false;
-const DEFAULT_PW='123456';
-function updateHintDisplay(){
-  const el=document.getElementById('hintPw');const btn=document.getElementById('hintToggleBtn');if(!el)return;
-  if(_hintVisible){el.textContent=DEFAULT_PW;el.style.color='#c25600';if(btn)btn.textContent='🙈 ซ่อน';}
-  else{el.textContent='••••••';el.style.color='#b8a48e';if(btn)btn.textContent='👁️ ดู';}
-}
-function toggleHintPw(){_hintVisible=!_hintVisible;updateHintDisplay();if(_hintVisible){const inp=document.getElementById('pwInput');if(inp&&!inp.value)inp.value=DEFAULT_PW;}}
+let _pwVisible=false, _tokenVisible=false;
 function togglePwVisible(){_pwVisible=!_pwVisible;const inp=document.getElementById('pwInput');const btn=document.getElementById('eyeBtn');if(!inp)return;inp.type=_pwVisible?'text':'password';if(btn)btn.textContent=_pwVisible?'🙈':'👁️';}
 function toggleTokenVisible(){_tokenVisible=!_tokenVisible;const inp=document.getElementById('lineToken');const btn=document.getElementById('lineTokenEye');if(!inp)return;inp.type=_tokenVisible?'text':'password';if(btn)btn.textContent=_tokenVisible?'🙈':'👁️';}
 
@@ -1222,13 +1210,12 @@ async function doLogin(){
     showErr(res?.error||res?.message||'❌ รหัสผ่านไม่ถูกต้อง');
     const box=document.querySelector('.login-box');if(box){box.style.animation='shake .4s ease';setTimeout(()=>box.style.animation='',450);}
   }catch(e){
-    if(pw===DEFAULT_PW){sessionStorage.setItem('adm_auth','1');bootApp();toast('⚠️ Demo Mode','wn');return;}
     showErr('เชื่อมต่อระบบไม่ได้ — ตรวจสอบ Deploy');
   }finally{btn.disabled=false;btn.innerHTML='🔓 เข้าสู่ระบบ Admin';}
 }
 function showErr(msg){const el=document.getElementById('loginErr');el.textContent=msg;el.classList.add('show');}
 function logout(){sessionStorage.removeItem('adm_auth');document.getElementById('adminApp').classList.remove('show');document.getElementById('loginScreen').classList.remove('hide');document.getElementById('pwInput').value='';document.getElementById('loginErr').classList.remove('show');_pwVisible=false;const inp=document.getElementById('pwInput');if(inp)inp.type='password';const btn=document.getElementById('eyeBtn');if(btn)btn.textContent='👁️';}
-function goUser(){window.open(window.location.href.split('?')[0],'_blank');}
+function goUser(){window.open(window.location.origin+'/','_blank');}
 
 async function bootApp(){
   document.getElementById('loginScreen').classList.add('hide');
@@ -1237,7 +1224,7 @@ async function bootApp(){
   const cfgFY=document.getElementById('CfgFY');if(cfgFY)cfgFY.textContent=fy;
   const cfgQ=document.getElementById('CfgQ');if(cfgQ)cfgQ.textContent=q;
   ['StFYOpt','DashFYOpt'].forEach(id=>{const o=document.getElementById(id);if(o){o.value=fy;o.textContent='ปีงบ '+fy;}});
-  if(isDemo) setTimeout(()=>toast('⚠️ Demo Mode — รหัสผ่าน: 123456','wn'),400);
+  if(isDemo) setTimeout(()=>toast('⚠️ Demo Mode','wn'),400);
   if(!isDemo) try{await GS.call('initSheets');}catch(e){}
   loadAll();loadSettings();loadNotifySettings();
 }
@@ -2209,10 +2196,12 @@ async function processLogoFile(file) {
     toast('เกิดข้อผิดพลาด: ' + err.message, 'er');
   }
 }
-function applyLogoUrl(){
+async function applyLogoUrl(){
   const url=document.getElementById('logoUrlInput').value.trim();
   if(!url){toast('กรุณากรอก URL','wn');return;}
-  currentLogoDataUrl=url;applyLogoPreview(url,'URL โลโก้');toast('✅ ตั้งโลโก้แล้ว — กดบันทึกเพื่อใช้งาน','ok');
+  currentLogoDataUrl=url;
+  applyLogoPreview(url,'URL โลโก้');
+  await saveAppBranding();
 }
 function applyLogoPreview(src,name){
   const preview=document.getElementById('logoPreview');
