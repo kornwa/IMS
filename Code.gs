@@ -511,6 +511,7 @@ function buildFlexNewRequest(req, dets) {
   const branding = getBrandingObject();
   const items = (dets || []).slice(0, 6);
   const hasMore = (dets || []).length > 6;
+ 
   const itemBoxes = items.map((d, i) => ({
     type: 'box', layout: 'horizontal', spacing: 'sm',
     contents: [
@@ -519,38 +520,70 @@ function buildFlexNewRequest(req, dets) {
       { type: 'text', text: String(d.qtyRequested || 0) + ' ' + String(d.unit || ''), size: 'xs', color: '#666666', flex: 3, align: 'end' },
     ],
   }));
-  if (hasMore) itemBoxes.push({ type: 'text', text: '… และอีก ' + ((dets || []).length - 6) + ' รายการ', size: 'xs', color: '#999999', align: 'center', margin: 'sm' });
-
+  if (hasMore) {
+    itemBoxes.push({
+      type: 'text',
+      text: '… และอีก ' + ((dets || []).length - 6) + ' รายการ',
+      size: 'xs', color: '#999999', align: 'center', margin: 'sm',
+    });
+  }
+ 
   return {
     type: 'flex',
     altText: '📦 ใบเบิกวัสดุใหม่: ' + req.requestId,
     contents: {
       type: 'bubble', size: 'mega',
+ 
+      // ── Header พร้อมรูปการ์ตูน (position: absolute) ──
       header: {
-        type: 'box', layout: 'vertical',
-        backgroundColor: branding.theme_primary_dark || '#c94d00', paddingAll: 'lg',
+        type: 'box', layout: 'relative',
+        backgroundColor: branding.theme_primary_dark || '#c94d00',
+        paddingAll: 'lg', paddingBottom: '20px',
         contents: [
-          { type: 'text', text: '📦 ใบเบิกวัสดุใหม่', color: '#ffffff', weight: 'bold', size: 'lg' },
-          { type: 'text', text: req.requestId, color: '#ffffff', size: 'xs', margin: 'xs' },
+          // ข้อความซ้าย
+          {
+            type: 'box', layout: 'vertical',
+            contents: [
+              { type: 'text', text: '📦 ใบเบิกวัสดุใหม่', color: '#ffffff', weight: 'bold', size: 'lg' },
+              { type: 'text', text: req.requestId, color: '#ffffffcc', size: 'xs', margin: 'xs' },
+            ],
+          },
+          // 🐿️ รูปการ์ตูน — ลอยมุมขวาล่าง header
+          {
+            type: 'image',
+            url: CARTOON.NEW_REQUEST,
+            position: 'absolute',
+            offsetEnd: '0px',
+            offsetBottom: '-10px',
+            size: '80px',
+            aspectMode: 'fit',
+          },
         ],
       },
+ 
       body: {
         type: 'box', layout: 'vertical', spacing: 'md',
         contents: [
-          { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
-            { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '👤 ผู้เบิก', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requesterName || '–'), size: 'sm', color: '#333333', flex: 7, weight: 'bold' }]},
-            { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🏢 หน่วยงาน', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.department || '–'), size: 'sm', color: '#333333', flex: 7 }]},
-            { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🎯 วัตถุประสงค์', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.purpose || '–'), size: 'sm', color: '#333333', flex: 7, wrap: true }]},
-            { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📅 วันที่', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestDate || '–'), size: 'sm', color: '#333333', flex: 7 }]},
-          ]},
+          {
+            type: 'box', layout: 'vertical', spacing: 'sm',
+            contents: [
+              { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '👤 ผู้เบิก', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requesterName || '–'), size: 'sm', color: '#333333', flex: 7, weight: 'bold' }] },
+              { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🏢 หน่วยงาน', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.department || '–'), size: 'sm', color: '#333333', flex: 7 }] },
+              { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🎯 วัตถุประสงค์', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.purpose || '–'), size: 'sm', color: '#333333', flex: 7, wrap: true }] },
+              { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📅 วันที่', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestDate || '–'), size: 'sm', color: '#333333', flex: 7 }] },
+            ],
+          },
           { type: 'separator', margin: 'md' },
           { type: 'text', text: '🧾 รายการที่ขอเบิก (' + ((dets || []).length || 0) + ' รายการ)', weight: 'bold', size: 'sm', color: '#555555' },
           { type: 'box', layout: 'vertical', spacing: 'xs', contents: itemBoxes },
         ],
       },
+ 
       footer: {
         type: 'box', layout: 'vertical', spacing: 'sm',
-        contents: [{ type: 'text', text: '⏳ รอการอนุมัติจาก Admin', size: 'xs', color: '#999999', align: 'center' }],
+        contents: [
+          { type: 'text', text: '⏳ รอการอนุมัติจาก Admin', size: 'xs', color: '#999999', align: 'center' },
+        ],
       },
     },
   };
@@ -559,47 +592,80 @@ function buildFlexNewRequest(req, dets) {
 function buildFlexStatusUpdate(req, dets, status, detail) {
   const branding = getBrandingObject();
   const colorMap = {
-    'อนุมัติ'        : { bg: '#16a34a', emoji: '✅', label: 'อนุมัติแล้ว' },
-    'อนุมัติบางส่วน' : { bg: '#d97706', emoji: '⚠️', label: 'อนุมัติบางส่วน' },
-    'ปฏิเสธ'         : { bg: '#dc2626', emoji: '❌', label: 'ปฏิเสธ' },
-    'ยกเลิก'         : { bg: '#6b7280', emoji: '🚫', label: 'ยกเลิก' },
+    'อนุมัติ'        : { bg: '#16a34a', emoji: '✅', label: 'อนุมัติแล้ว',     cartoon: CARTOON.APPROVE },
+    'อนุมัติบางส่วน' : { bg: '#d97706', emoji: '⚠️', label: 'อนุมัติบางส่วน', cartoon: CARTOON.APPROVE },
+    'ปฏิเสธ'         : { bg: '#dc2626', emoji: '❌', label: 'ปฏิเสธ',          cartoon: CARTOON.REJECT  },
+    'ยกเลิก'         : { bg: '#6b7280', emoji: '🚫', label: 'ยกเลิก',          cartoon: CARTOON.REJECT  },
   };
-  const c = colorMap[status] || { bg: '#3b82f6', emoji: '📋', label: status };
+  const c = colorMap[status] || { bg: '#3b82f6', emoji: '📋', label: status, cartoon: CARTOON.APPROVE };
   const totalReq = (dets || []).reduce((s, d) => s + Number(d.qtyRequested), 0);
   const totalApp = (dets || []).reduce((s, d) => s + Number(d.qtyApproved || 0), 0);
-
+ 
   const bodyContents = [
-    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📋 เลขที่', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestId), size: 'sm', color: '#333333', flex: 7, weight: 'bold' }]},
-    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📅 วันที่เบิก', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestDate || '–'), size: 'sm', color: '#333333', flex: 7 }]},
-    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🎯 วัตถุประสงค์', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.purpose || '–'), size: 'sm', color: '#333333', flex: 7, wrap: true }]},
+    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📋 เลขที่', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestId), size: 'sm', color: '#333333', flex: 7, weight: 'bold' }] },
+    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📅 วันที่เบิก', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.requestDate || '–'), size: 'sm', color: '#333333', flex: 7 }] },
+    { type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🎯 วัตถุประสงค์', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.purpose || '–'), size: 'sm', color: '#333333', flex: 7, wrap: true }] },
   ];
-
+ 
   if (status === 'อนุมัติ' || status === 'อนุมัติบางส่วน') {
     bodyContents.push({ type: 'separator', margin: 'md' });
-    bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📦 รายการ', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: (dets || []).length + ' รายการ', size: 'sm', color: '#333333', flex: 7, weight: 'bold' }]});
-    bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🔢 จำนวน', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: 'ขอ ' + totalReq + ' · อนุมัติ ' + totalApp + ' หน่วย', size: 'sm', color: '#333333', flex: 7 }]});
-    if (req.approvedBy) bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '✍️ ผู้อนุมัติ', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.approvedBy), size: 'sm', color: '#333333', flex: 7 }]});
+    bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '📦 รายการ', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: (dets || []).length + ' รายการ', size: 'sm', color: '#333333', flex: 7, weight: 'bold' }] });
+    bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '🔢 จำนวน', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: 'ขอ ' + totalReq + ' · อนุมัติ ' + totalApp + ' หน่วย', size: 'sm', color: '#333333', flex: 7 }] });
+    if (req.approvedBy) bodyContents.push({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: '✍️ ผู้อนุมัติ', size: 'xs', color: '#999999', flex: 3 }, { type: 'text', text: String(req.approvedBy), size: 'sm', color: '#333333', flex: 7 }] });
   }
-
+ 
   if (detail && (status === 'ปฏิเสธ' || status === 'อนุมัติบางส่วน')) {
     bodyContents.push({ type: 'separator', margin: 'md' });
-    bodyContents.push({ type: 'box', layout: 'vertical', spacing: 'xs', backgroundColor: status === 'ปฏิเสธ' ? '#fef2f2' : '#fffbeb', paddingAll: 'sm', cornerRadius: '4px', contents: [
-      { type: 'text', text: status === 'ปฏิเสธ' ? '❌ เหตุผล' : '⚠️ หมายเหตุ', size: 'xs', color: '#666666', weight: 'bold' },
-      { type: 'text', text: String(detail).substring(0, 200), size: 'xs', color: '#555555', wrap: true, margin: 'xs' }
-    ]});
+    bodyContents.push({
+      type: 'box', layout: 'vertical', spacing: 'xs',
+      backgroundColor: status === 'ปฏิเสธ' ? '#fef2f2' : '#fffbeb',
+      paddingAll: 'sm', cornerRadius: '4px',
+      contents: [
+        { type: 'text', text: status === 'ปฏิเสธ' ? '❌ เหตุผล' : '⚠️ หมายเหตุ', size: 'xs', color: '#666666', weight: 'bold' },
+        { type: 'text', text: String(detail).substring(0, 200), size: 'xs', color: '#555555', wrap: true, margin: 'xs' },
+      ],
+    });
   }
-
+ 
   return {
     type: 'flex',
     altText: c.emoji + ' ใบเบิก ' + req.requestId + ' — ' + c.label,
     contents: {
       type: 'bubble', size: 'mega',
-      header: { type: 'box', layout: 'vertical', backgroundColor: c.bg, paddingAll: 'lg', contents: [
-        { type: 'text', text: c.emoji + ' ' + c.label, color: '#ffffff', weight: 'bold', size: 'xl' },
-        { type: 'text', text: 'ผลใบเบิกวัสดุของท่าน', color: '#ffffff', size: 'xs', margin: 'xs' }
-      ]},
+ 
+      // ── Header พร้อมการ์ตูนตามสถานะ ──
+      header: {
+        type: 'box', layout: 'relative',
+        backgroundColor: c.bg, paddingAll: 'lg', paddingBottom: '16px',
+        contents: [
+          {
+            type: 'box', layout: 'vertical',
+            contents: [
+              { type: 'text', text: c.emoji + ' ' + c.label, color: '#ffffff', weight: 'bold', size: 'xl' },
+              { type: 'text', text: 'ผลใบเบิกวัสดุของท่าน', color: '#ffffffcc', size: 'xs', margin: 'xs' },
+            ],
+          },
+          // 🐿️ รูปการ์ตูนตามสถานะ
+          {
+            type: 'image',
+            url: c.cartoon,
+            position: 'absolute',
+            offsetEnd: '0px',
+            offsetBottom: '-8px',
+            size: '75px',
+            aspectMode: 'fit',
+          },
+        ],
+      },
+ 
       body: { type: 'box', layout: 'vertical', spacing: 'md', contents: bodyContents },
-      footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [{ type: 'text', text: branding.org_name || 'ระบบเบิกวัสดุคลัง', size: 'xs', color: '#999999', align: 'center' }]},
+ 
+      footer: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: branding.org_name || 'ระบบเบิกวัสดุคลัง', size: 'xs', color: '#999999', align: 'center' },
+        ],
+      },
     },
   };
 }
@@ -727,38 +793,77 @@ function buildFlexLowStock(lowItems) {
   const branding = getBrandingObject();
   const items = lowItems.slice(0, 8);
   const hasMore = lowItems.length > 8;
+ 
   const itemBoxes = items.map((it, i) => ({
     type: 'box', layout: 'horizontal', spacing: 'sm',
     contents: [
       { type: 'text', text: String(i + 1) + '.', size: 'xs', color: '#999999', flex: 1 },
       { type: 'text', text: String(it.name || ''), size: 'sm', color: '#333333', flex: 6, wrap: true },
-      { type: 'text', text: String(it.qty) + '/' + String(it.minQty), size: 'sm', color: '#dc2626', flex: 3, align: 'end', weight: 'bold' }
-    ]
+      { type: 'text', text: String(it.qty) + '/' + String(it.minQty), size: 'sm', color: '#dc2626', flex: 3, align: 'end', weight: 'bold' },
+    ],
   }));
-  if (hasMore) itemBoxes.push({ type: 'text', text: '… และอีก ' + (lowItems.length - 8) + ' รายการ', size: 'xs', color: '#999999', align: 'center', margin: 'sm' });
-
+  if (hasMore) {
+    itemBoxes.push({
+      type: 'text',
+      text: '… และอีก ' + (lowItems.length - 8) + ' รายการ',
+      size: 'xs', color: '#999999', align: 'center', margin: 'sm',
+    });
+  }
+ 
   return {
     type: 'flex',
     altText: '⚠️ วัสดุใกล้หมด ' + lowItems.length + ' รายการ',
     contents: {
       type: 'bubble', size: 'mega',
-      header: { type: 'box', layout: 'vertical', backgroundColor: '#dc2626', paddingAll: 'lg', contents: [
-        { type: 'text', text: '⚠️ วัสดุใกล้หมด', color: '#ffffff', weight: 'bold', size: 'xl' },
-        { type: 'text', text: 'พบ ' + lowItems.length + ' รายการต่ำกว่าเกณฑ์ขั้นต่ำ', color: '#ffffff', size: 'xs', margin: 'xs' }
-      ]},
-      body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
-        { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
-          { type: 'text', text: 'ลำดับ', size: 'xxs', color: '#999999', flex: 1, weight: 'bold' },
-          { type: 'text', text: 'ชื่อวัสดุ', size: 'xxs', color: '#999999', flex: 6, weight: 'bold' },
-          { type: 'text', text: 'เหลือ/ขั้นต่ำ', size: 'xxs', color: '#999999', flex: 3, weight: 'bold', align: 'end' }
-        ]},
-        { type: 'separator', margin: 'sm' },
-        { type: 'box', layout: 'vertical', spacing: 'xs', contents: itemBoxes }
-      ]},
-      footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
-        { type: 'text', text: '🕐 ' + nowThai(), size: 'xxs', color: '#aaaaaa', align: 'center' },
-        { type: 'text', text: branding.org_name || 'ระบบเบิกวัสดุคลัง', size: 'xs', color: '#999999', align: 'center' }
-      ]},
+ 
+      // ── Header + การ์ตูน ──
+      header: {
+        type: 'box', layout: 'relative',
+        backgroundColor: '#dc2626', paddingAll: 'lg', paddingBottom: '20px',
+        contents: [
+          {
+            type: 'box', layout: 'vertical',
+            contents: [
+              { type: 'text', text: '⚠️ วัสดุใกล้หมด', color: '#ffffff', weight: 'bold', size: 'xl' },
+              { type: 'text', text: 'พบ ' + lowItems.length + ' รายการต่ำกว่าเกณฑ์ขั้นต่ำ', color: '#ffffffcc', size: 'xs', margin: 'xs' },
+            ],
+          },
+          // 🐿️ รูปการ์ตูน
+          {
+            type: 'image',
+            url: CARTOON.LOW_STOCK,
+            position: 'absolute',
+            offsetEnd: '0px',
+            offsetBottom: '-12px',
+            size: '85px',
+            aspectMode: 'fit',
+          },
+        ],
+      },
+ 
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: 'ลำดับ', size: 'xxs', color: '#999999', flex: 1, weight: 'bold' },
+              { type: 'text', text: 'ชื่อวัสดุ', size: 'xxs', color: '#999999', flex: 6, weight: 'bold' },
+              { type: 'text', text: 'เหลือ/ขั้นต่ำ', size: 'xxs', color: '#999999', flex: 3, weight: 'bold', align: 'end' },
+            ],
+          },
+          { type: 'separator', margin: 'sm' },
+          { type: 'box', layout: 'vertical', spacing: 'xs', contents: itemBoxes },
+        ],
+      },
+ 
+      footer: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: '🕐 ' + nowThai(), size: 'xxs', color: '#aaaaaa', align: 'center' },
+          { type: 'text', text: branding.org_name || 'ระบบเบิกวัสดุคลัง', size: 'xs', color: '#999999', align: 'center' },
+        ],
+      },
     },
   };
 }
