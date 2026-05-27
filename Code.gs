@@ -543,30 +543,27 @@ function buildFlexNewRequest(req, dets) {
  
       // ── Header พร้อมรูปการ์ตูน (position: absolute) ──
       header: {
-        type: 'box', layout: 'relative',
-        backgroundColor: branding.theme_primary_dark || '#c94d00',
-        paddingAll: 'lg', paddingBottom: '20px',
-        contents: [
-          // ข้อความซ้าย
-          {
-            type: 'box', layout: 'vertical',
-            contents: [
-              { type: 'text', text: '📦 ใบเบิกวัสดุใหม่', color: '#ffffff', weight: 'bold', size: 'lg' },
-              { type: 'text', text: req.requestId, color: '#ffffffcc', size: 'xs', margin: 'xs' },
-            ],
-          },
-          // 🐿️ รูปการ์ตูน — ลอยมุมขวาล่าง header
-          {
-            type: 'image',
-            url: CARTOON.NEW_REQUEST,
-            position: 'absolute',
-            offsetEnd: '0px',
-            offsetBottom: '-10px',
-            size: '80px',
-            aspectMode: 'fit',
-          },
-        ],
-      },
+  type: 'box', layout: 'horizontal',
+  backgroundColor: branding.theme_primary_dark || '#c94d00',
+  paddingAll: 'lg',
+  contents: [
+    {
+      type: 'box', layout: 'vertical', flex: 4, justifyContent: 'center',
+      contents: [
+        { type: 'text', text: '📦 ใบเบิกวัสดุใหม่', color: '#ffffff', weight: 'bold', size: 'lg' },
+        { type: 'text', text: req.requestId, color: '#ffffffcc', size: 'xs', margin: 'xs' },
+      ],
+    },
+    {
+      type: 'image',
+      url: CARTOON.NEW_REQUEST,
+      flex: 2,
+      size: 'sm',
+      aspectMode: 'fit',
+      aspectRatio: '1:1',
+    },
+  ],
+},
  
       body: {
         type: 'box', layout: 'vertical', spacing: 'md',
@@ -642,28 +639,26 @@ function buildFlexStatusUpdate(req, dets, status, detail) {
  
       // ── Header พร้อมการ์ตูนตามสถานะ ──
       header: {
-        type: 'box', layout: 'relative',
-        backgroundColor: c.bg, paddingAll: 'lg', paddingBottom: '16px',
-        contents: [
-          {
-            type: 'box', layout: 'vertical',
-            contents: [
-              { type: 'text', text: c.emoji + ' ' + c.label, color: '#ffffff', weight: 'bold', size: 'xl' },
-              { type: 'text', text: 'ผลใบเบิกวัสดุของท่าน', color: '#ffffffcc', size: 'xs', margin: 'xs' },
-            ],
-          },
-          // 🐿️ รูปการ์ตูนตามสถานะ
-          {
-            type: 'image',
-            url: c.cartoon,
-            position: 'absolute',
-            offsetEnd: '0px',
-            offsetBottom: '-8px',
-            size: '75px',
-            aspectMode: 'fit',
-          },
-        ],
-      },
+  type: 'box', layout: 'horizontal',
+  backgroundColor: c.bg, paddingAll: 'lg',
+  contents: [
+    {
+      type: 'box', layout: 'vertical', flex: 4, justifyContent: 'center',
+      contents: [
+        { type: 'text', text: c.emoji + ' ' + c.label, color: '#ffffff', weight: 'bold', size: 'xl' },
+        { type: 'text', text: 'ผลใบเบิกวัสดุของท่าน', color: '#ffffffcc', size: 'xs', margin: 'xs' },
+      ],
+    },
+    {
+      type: 'image',
+      url: c.cartoon,
+      flex: 2,
+      size: 'sm',
+      aspectMode: 'fit',
+      aspectRatio: '1:1',
+    },
+  ],
+},
  
       body: { type: 'box', layout: 'vertical', spacing: 'md', contents: bodyContents },
  
@@ -824,28 +819,26 @@ function buildFlexLowStock(lowItems) {
  
       // ── Header + การ์ตูน ──
       header: {
-        type: 'box', layout: 'relative',
-        backgroundColor: '#dc2626', paddingAll: 'lg', paddingBottom: '20px',
-        contents: [
-          {
-            type: 'box', layout: 'vertical',
-            contents: [
-              { type: 'text', text: '⚠️ วัสดุใกล้หมด', color: '#ffffff', weight: 'bold', size: 'xl' },
-              { type: 'text', text: 'พบ ' + lowItems.length + ' รายการต่ำกว่าเกณฑ์ขั้นต่ำ', color: '#ffffffcc', size: 'xs', margin: 'xs' },
-            ],
-          },
-          // 🐿️ รูปการ์ตูน
-          {
-            type: 'image',
-            url: CARTOON.LOW_STOCK,
-            position: 'absolute',
-            offsetEnd: '0px',
-            offsetBottom: '-12px',
-            size: '85px',
-            aspectMode: 'fit',
-          },
-        ],
-      },
+  type: 'box', layout: 'horizontal',
+  backgroundColor: '#dc2626', paddingAll: 'lg',
+  contents: [
+    {
+      type: 'box', layout: 'vertical', flex: 4, justifyContent: 'center',
+      contents: [
+        { type: 'text', text: '⚠️ วัสดุใกล้หมด', color: '#ffffff', weight: 'bold', size: 'xl' },
+        { type: 'text', text: 'พบ ' + lowItems.length + ' รายการต่ำกว่าเกณฑ์ขั้นต่ำ', color: '#ffffffcc', size: 'xs', margin: 'xs' },
+      ],
+    },
+    {
+      type: 'image',
+      url: CARTOON.LOW_STOCK,
+      flex: 2,
+      size: 'sm',
+      aspectMode: 'fit',
+      aspectRatio: '1:1',
+    },
+  ],
+},
  
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm',
