@@ -61,6 +61,13 @@ const THEME_PRESETS = {
   teal  : { primary:'#0891b2', dark:'#0e7490', light:'#06b6d4' },
   pink  : { primary:'#db2777', dark:'#be185d', light:'#ec4899' },
 };
+// ─── Cartoon URLs ─────────────────────────────────────────
+const CARTOON = {
+  NEW_REQUEST : 'https://raw.githubusercontent.com/kornwa/IMS/main/4.png',
+  APPROVE     : 'https://raw.githubusercontent.com/kornwa/IMS/main/5.png',
+  REJECT      : 'https://raw.githubusercontent.com/kornwa/IMS/main/6.png',
+  LOW_STOCK   : 'https://raw.githubusercontent.com/kornwa/IMS/main/ChatGPT%20Image%2027%20%E0%B8%9E.%E0%B8%84.%202569%2011_05_34%20(1).png',
+};
 
 // ══════════════════════════════════════════════════════════
 //  ENTRY POINTS
