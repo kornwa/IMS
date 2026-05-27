@@ -115,6 +115,21 @@ function doPost(e) {
         replyLineMessage(ev.replyToken, buildUserStatusReply(userId));
         return;
       }
+if (msgText === 'ของใกล้หมด' || msgText === 'สต็อก' || msgText === 'วัสดุหมด' || msgText === 'stock') {
+        try {
+          const low = rows(SH.ITEMS).filter(x => Number(x.qty) <= Number(x.minQty) && Number(x.qty) >= 0);
+          if (!low.length) {
+            replyLineMessage(ev.replyToken, '✅ ขณะนี้ไม่มีวัสดุใกล้หมด\nสต็อกทุกรายการอยู่ในเกณฑ์ปกติ');
+          } else {
+            const lowMapped = low.map(it => ({ name: it.name, qty: Number(it.qty), minQty: Number(it.minQty), unit: it.unit || '' }));
+            replyLineMessage(ev.replyToken, buildFlexLowStock(lowMapped));
+          }
+        } catch(e) {
+          Logger.log('ของใกล้หมด error: ' + e.message);
+          replyLineMessage(ev.replyToken, '⚠️ เกิดข้อผิดพลาด: ' + e.message);
+        }
+        return;
+      }
 
       if (msgText === 'ID' || msgText === 'id' || msgText.toLowerCase() === 'my id') {
         replyLineMessage(ev.replyToken, '🆔 LINE User ID ของคุณ:\n' + userId + '\n\n(สำหรับ Admin คัดลอกไปตั้งค่าระบบ)');
@@ -127,6 +142,7 @@ function doPost(e) {
           '📌 คำสั่งที่ใช้ได้:\n' +
           '• ลงทะเบียน [ชื่อ] [หน่วยงาน]\n' +
           '• สถานะ — ดูใบเบิกล่าสุด\n' +
+          '• ของใกล้หมด — ดูวัสดุที่ต้องเติม\n' +
           '• ID — ดู LINE User ID ของท่าน\n\n' +
           '💡 ตัวอย่าง:\nลงทะเบียน สมใจ ฝ่ายการเงิน'
         );
@@ -1305,7 +1321,6 @@ function adjustStock(json) {
   if (after < 0) return JSON.stringify({ success: false, error: 'สต็อกไม่เพียงพอ (คงเหลือ ' + before + ')' });
   setRow(SH.ITEMS, 'id', itemId, { qty: after });
   addRow(SH.LOG, { logId: uid('LOG'), itemId, itemName: it.name, action: delta > 0 ? 'รับเข้า' : 'จ่ายออก', qtyBefore: before, qtyChange: delta, qtyAfter: after, note: note || '', operator: operator || 'Admin', createdAt: new Date().toISOString() });
-  if (delta < 0) { try { const low = rows(SH.ITEMS).filter(x => Number(x.qty) <= Number(x.minQty) && Number(x.qty) >= 0); if (low.length) notifyLowStock(low); } catch(e) {} }
   return JSON.stringify({ success: true, newQty: after });
 }
 
