@@ -63,12 +63,11 @@ const THEME_PRESETS = {
 };
 // ─── Cartoon URLs ─────────────────────────────────────────
 const CARTOON = {
-  NEW_REQUEST : 'https://raw.githubusercontent.com/kornwa/IMS/main/4.png',
-  APPROVE     : 'https://raw.githubusercontent.com/kornwa/IMS/main/5.png',
-  REJECT      : 'https://raw.githubusercontent.com/kornwa/IMS/main/6.png',
-  LOW_STOCK   : 'https://raw.githubusercontent.com/kornwa/IMS/main/ChatGPT%20Image%2027%20%E0%B8%9E.%E0%B8%84.%202569%2011_05_34%20(1).png',
+  NEW_REQUEST : 'https://drive.google.com/thumbnail?id=1LSvCB6wWAEh9wRxTLOoIAeRdgihumOw8&sz=w400',
+  APPROVE     : 'https://drive.google.com/thumbnail?id=1MjE1S_FcCrhDucuCi-FUeckqdDYrP7vq&sz=w400',
+  REJECT      : 'https://drive.google.com/thumbnail?id=1cSBSAtAontUn2VZvPR-RzfmtUHXcUKzO&sz=w400',
+  LOW_STOCK   : 'https://drive.google.com/thumbnail?id=1m9FtbZAzouFlzIdOYYkPtbmm3VqdLjV8&sz=w400',
 };
-
 // ══════════════════════════════════════════════════════════
 //  ENTRY POINTS
 // ══════════════════════════════════════════════════════════
