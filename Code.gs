@@ -1747,3 +1747,145 @@ function updateUserActivity(userId) {
     }
   }
 }
+function createRichMenu() {
+  const token = _getLineChannelToken();
+  if (!token) { Logger.log('ไม่พบ Token'); return; }
+
+  // ── 1. สร้าง Rich Menu ──
+  const menu = {
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: 'ระบบเบิกวัสดุ',
+    chatBarText: '📋 เมนูระบบเบิกวัสดุ',
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        action: { type: 'message', label: '📋 สถานะใบเบิก', text: 'สถานะ' }
+      },
+      {
+        bounds: { x: 833, y: 0, width: 834, height: 843 },
+        action: { type: 'message', label: '⚠️ ของใกล้หมด', text: 'ของใกล้หมด' }
+      },
+      {
+        bounds: { x: 1667, y: 0, width: 833, height: 843 },
+        action: { type: 'message', label: '🆔 ดู ID ของฉัน', text: 'ID' }
+      }
+    ]
+  };
+
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify(menu),
+    muteHttpExceptions: true
+  });
+
+  const result = JSON.parse(res.getContentText());
+  Logger.log('Rich Menu ID: ' + JSON.stringify(result));
+
+  if (!result.richMenuId) {
+    Logger.log('สร้าง Rich Menu ล้มเหลว: ' + JSON.stringify(result));
+    return;
+  }
+
+  const richMenuId = result.richMenuId;
+
+  // ── 2. อัปโหลดรูป Rich Menu ──
+  // สร้างรูปอย่างง่ายด้วย HTML → PDF → ไม่ได้ใช้วิธีนี้
+  // ใช้วิธีอัปโหลดรูปจาก URL แทน
+  const imgRes = uploadRichMenuImage(richMenuId, token);
+  Logger.log('Upload image: ' + imgRes);
+
+  // ── 3. ตั้งเป็น Default Rich Menu ──
+  const setRes = UrlFetchApp.fetch(
+    'https://api.line.me/v2/bot/user/all/richmenu/' + richMenuId,
+    {
+      method: 'post',
+      headers: { Authorization: 'Bearer ' + token },
+      muteHttpExceptions: true
+    }
+  );
+  Logger.log('Set default: ' + setRes.getResponseCode());
+  Logger.log('✅ Rich Menu สร้างสำเร็จ! ID: ' + richMenuId);
+}
+
+function uploadRichMenuImage(richMenuId, token) {
+  // ── สร้างรูป Rich Menu ด้วย HTML ──
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 2500px; height: 843px;
+  font-family: 'Sarabun', sans-serif;
+  background: #1a0a00;
+  display: flex;
+}
+.cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  border-right: 2px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cell:last-child { border-right: none; }
+.cell:nth-child(1) { background: linear-gradient(160deg, #c94d00, #e85d04); }
+.cell:nth-child(2) { background: linear-gradient(160deg, #991b1b, #dc2626); }
+.cell:nth-child(3) { background: linear-gradient(160deg, #1e3a5f, #2563eb); }
+.icon { font-size: 120px; line-height: 1; }
+.label {
+  font-size: 60px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+  text-align: center;
+  padding: 0 20px;
+  line-height: 1.3;
+}
+.sub {
+  font-size: 38px;
+  color: rgba(255,255,255,0.72);
+  font-weight: 600;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+  <div class="cell">
+    <span class="icon">📋</span>
+    <div class="label">สถานะใบเบิก</div>
+    <div class="sub">พิมพ์: สถานะ</div>
+  </div>
+  <div class="cell">
+    <span class="icon">⚠️</span>
+    <div class="label">วัสดุใกล้หมด</div>
+    <div class="sub">พิมพ์: ของใกล้หมด</div>
+  </div>
+  <div class="cell">
+    <span class="icon">🆔</span>
+    <div class="label">ดู ID ของฉัน</div>
+    <div class="sub">พิมพ์: ID</div>
+  </div>
+</body>
+</html>`;
+
+  // แปลง HTML → PDF → Blob
+  const blob = Utilities.newBlob(html, 'text/html', 'richmenu.html');
+  const file = DriveApp.createFile(blob);
+  const pdfBlob = file.getAs('application/pdf');
+  file.setTrashed(true);
+
+  // ⚠️ LINE ต้องการ JPEG ขนาด 2500×843 — ต้องอัปโหลดรูปที่ถูกต้อง
+  // วิธีนี้ใช้รูป placeholder ก่อน แล้วไปอัปโหลดรูปจริงใน OA Manager
+  Logger.log('⚠️ กรุณาอัปโหลดรูป Rich Menu ใน LINE OA Manager ด้วยตนเอง');
+  Logger.log('Rich Menu ID: ' + richMenuId);
+  return 'กรุณาอัปโหลดรูปด้วยตนเองที่ LINE OA Manager';
+}
