@@ -115,21 +115,39 @@ function doPost(e) {
         replyLineMessage(ev.replyToken, buildUserStatusReply(userId));
         return;
       }
-if (msgText === 'ของใกล้หมด' || msgText === 'สต็อก' || msgText === 'วัสดุหมด' || msgText === 'stock') {
-        try {
-          const low = rows(SH.ITEMS).filter(x => Number(x.qty) <= Number(x.minQty) && Number(x.qty) >= 0);
-          if (!low.length) {
-            replyLineMessage(ev.replyToken, '✅ ขณะนี้ไม่มีวัสดุใกล้หมด\nสต็อกทุกรายการอยู่ในเกณฑ์ปกติ');
-          } else {
-            const lowMapped = low.map(it => ({ name: it.name, qty: Number(it.qty), minQty: Number(it.minQty), unit: it.unit || '' }));
-            replyLineMessage(ev.replyToken, buildFlexLowStock(lowMapped));
-          }
-        } catch(e) {
-          Logger.log('ของใกล้หมด error: ' + e.message);
-          replyLineMessage(ev.replyToken, '⚠️ เกิดข้อผิดพลาด: ' + e.message);
-        }
-        return;
-      }
+if (
+  msgText === 'ของใกล้หมด' ||
+  msgText === 'ขอดูของใกล้หมด' ||
+  msgText === 'วัสดุใกล้หมด' ||
+  msgText === 'ดูของใกล้หมด' ||
+  msgText === 'สต็อก' ||
+  msgText === 'stock' ||
+  msgText.includes('ใกล้หมด')
+) {
+  try {
+    const low = rows(SH.ITEMS).filter(
+      x => Number(x.qty) <= Number(x.minQty) && Number(x.qty) >= 0
+    );
+    if (!low.length) {
+      replyLineMessage(
+        ev.replyToken,
+        '✅ ขณะนี้ไม่มีวัสดุใกล้หมด\nสต็อกทุกรายการอยู่ในเกณฑ์ปกติ 🎉'
+      );
+    } else {
+      const lowMapped = low.map(it => ({
+        name  : it.name,
+        qty   : Number(it.qty),
+        minQty: Number(it.minQty),
+        unit  : it.unit || ''
+      }));
+      replyLineMessage(ev.replyToken, buildFlexLowStock(lowMapped));
+    }
+  } catch(e) {
+    Logger.log('ของใกล้หมด error: ' + e.message);
+    replyLineMessage(ev.replyToken, '⚠️ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+  }
+  return;
+}
 
       if (msgText === 'ID' || msgText === 'id' || msgText.toLowerCase() === 'my id') {
         replyLineMessage(ev.replyToken, '🆔 LINE User ID ของคุณ:\n' + userId + '\n\n(สำหรับ Admin คัดลอกไปตั้งค่าระบบ)');
