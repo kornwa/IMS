@@ -669,7 +669,6 @@ function buildFlexStatusUpdate(req, dets, status, detail) {
     },
   };
 }
-
 function buildFlexAdminStatusUpdate(req, dets, status, detail) {
   const branding = getBrandingObject();
   const colorMap = {
