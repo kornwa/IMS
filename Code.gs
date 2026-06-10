@@ -64,7 +64,7 @@ const THEME_PRESETS = {
 // ─── Cartoon URLs ─────────────────────────────────────────
 const CARTOON = {
   NEW_REQUEST : 'https://drive.google.com/thumbnail?id=1XTMjvDYaDlupgN-D6k7h7xJXMQv5K45N&sz=w400',
-  APPROVE     : 'https://drive.google.com/thumbnail?id=1dzJgnVxI2588VRyUTbZC65UeJmXmB_Lu&sz=w400',
+  APPROVE     : 'https://drive.google.com/thumbnail?id=1pyxI-YIGEE90BKjyu7DK6Rn_rzsbe3Kr&sz=w400', 
   REJECT      : 'https://drive.google.com/thumbnail?id=1lOLn1gu9S7yW2qbcD-Tb8xkV6DLQOkuZ&sz=w400',
   LOW_STOCK   : 'https://drive.google.com/thumbnail?id=1pyxI-YIGEE90BKjyu7DK6Rn_rzsbe3Kr&sz=w400',
 };
