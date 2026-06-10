@@ -20,7 +20,7 @@ img, video, iframe, table { max-width: 100%; }
 :root{
   --primary:#e85d04;--primary-dark:#c94d00;--primary-light:#ff6b1a;
   --primary-10:rgba(232,93,4,.10);--primary-20:rgba(232,93,4,.20);
-  --bg:#f5f0ea;--surface:#fff;--surface-2:#fdf8f3;--surface-3:#f9f2e8;
+  --bg:#fdebd8;--surface:#fff;--surface-2:#fdf8f3;--surface-3:#f9f2e8;
   --border:rgba(0,0,0,.07);--border-med:rgba(0,0,0,.12);
   --text-1:#1a1208;--text-2:#4a3728;--text-3:#8a7060;--text-4:#b8a898;
   --green:#16a34a;--green-bg:#dcfce7;--red:#dc2626;--red-bg:#fee2e2;
@@ -432,9 +432,106 @@ body{font-family:var(--font);font-size:15px;font-weight:400;line-height:1.65;tex
   clip-path: polygon(50% 0%,56% 38%,100% 50%,56% 62%,50% 100%,44% 62%,0% 50%,44% 38%);
   z-index: 4;
 }
+
+
+/* ─── Upgraded card style ──────────────────────────────────── */
+.kpi-card {
+  background:rgba(255,255,255,.88)!important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.7)!important;
+  box-shadow:0 4px 20px rgba(232,93,4,.07),0 1px 4px rgba(0,0,0,.04)!important;
+}
+.hq-card {
+  background:rgba(255,255,255,.88)!important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.7)!important;
+  box-shadow:0 4px 20px rgba(232,93,4,.07),0 1px 4px rgba(0,0,0,.04)!important;
+}
+.card {
+  background:rgba(255,255,255,.88)!important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.7)!important;
+  box-shadow:0 4px 24px rgba(232,93,4,.08),0 1px 4px rgba(0,0,0,.04)!important;
+}
+.req-card {
+  background:rgba(255,255,255,.88)!important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.7)!important;
+  box-shadow:0 4px 16px rgba(232,93,4,.07),0 1px 3px rgba(0,0,0,.04)!important;
+}
+
+/* ─── Bottom nav glass ─────────────────────────────────────── */
+.bottom-nav {
+  background:rgba(255,255,255,.82)!important;
+  backdrop-filter:blur(20px)!important;
+  -webkit-backdrop-filter:blur(20px)!important;
+  border-top:1px solid rgba(232,93,4,.12)!important;
+  box-shadow:0 -6px 28px rgba(232,93,4,.10)!important;
+}
+
+/* ─── Topbar glass ─────────────────────────────────────────── */
+.topbar {
+  background:rgba(255,255,255,.78)!important;
+  backdrop-filter:blur(22px)!important;
+  -webkit-backdrop-filter:blur(22px)!important;
+  box-shadow:0 2px 16px rgba(232,93,4,.08)!important;
+}
+
+/* ─── Greeting banner premium ──────────────────────────────── */
+.greeting-banner {
+  background:linear-gradient(135deg,#1a0a00 0%,#3d1a04 40%,#c94d00 80%,#ff6b1a 100%)!important;
+  box-shadow:0 12px 40px rgba(232,93,4,.30),0 4px 16px rgba(0,0,0,.15)!important;
+}
+.greeting-banner::before {
+  background:radial-gradient(circle,rgba(255,180,80,.18) 0%,transparent 68%)!important;
+}
+
+/* ─── Alert bar glass ──────────────────────────────────────── */
+.alert-warn {
+  background:rgba(254,243,199,.85)!important;
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(252,211,77,.5)!important;
+}
+.alert-info {
+  background:rgba(232,93,4,.08)!important;
+  backdrop-filter:blur(8px);
+}
+
+
+
+/* ─── Beautiful App Background ─────────────────────────────── */
+html {
+  min-height:100%;
+  background:linear-gradient(150deg,
+    #fff5ec 0%, #fef0e2 25%,
+    #fde8d4 55%, #fce0c6 80%,
+    #fbd8bc 100%) fixed;
+}
+/* Decorative blobs - safe fixed divs (no pseudo-elements) */
+#bg-blob-1,#bg-blob-2,#bg-blob-3 {
+  position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+}
+#bg-blob-1 {
+  top:-80px;right:-80px;width:320px;height:320px;
+  background:radial-gradient(circle,rgba(232,93,4,.14) 0%,rgba(255,140,50,.06) 50%,transparent 68%);
+}
+#bg-blob-2 {
+  bottom:100px;left:-80px;width:260px;height:260px;
+  background:radial-gradient(circle,rgba(255,130,40,.10) 0%,rgba(232,93,4,.04) 52%,transparent 68%);
+}
+#bg-blob-3 {
+  top:45%;right:-60px;width:200px;height:200px;
+  background:radial-gradient(circle,rgba(232,93,4,.07) 0%,transparent 65%);
+}
+
 </style>
 </head>
 <body>
+<div id="bg-blob-1"></div><div id="bg-blob-2"></div><div id="bg-blob-3"></div>
 <div id="loading"><div class="spinner"></div><div id="loadTxt">กำลังโหลด...</div></div>
 <div id="toast-wrap"></div>
 
@@ -1506,15 +1603,6 @@ function loadMyStats(){
 }
 
 function renderNotif(){
-  // mascot peek in notif panel
-  const notifHeader = document.querySelector('#pg-notif .section-head .section-title');
-  if(notifHeader && !document.getElementById('notif-mascot')){
-    const m=document.createElement('img');
-    m.id='notif-mascot';m.src=CHAR_BOXES_URI;m.alt='';
-    m.style.cssText='width:58px;height:auto;position:absolute;right:12px;top:-6px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2));animation:gbFloat 4s ease-in-out infinite;pointer-events:none;';
-    const sec=document.getElementById('pg-notif');
-    if(sec){sec.style.position='relative';sec.appendChild(m);}
-  }
   const pend=MY_REQS.filter(r=>r.status==='รอดำเนินการ').length;
   const low=ALL_ITEMS.filter(it=>Number(it.qty)<=Number(it.minQty));
   let html='';
