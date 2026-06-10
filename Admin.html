@@ -1184,7 +1184,7 @@ function getCurFY(){const m=new Date().getMonth()+1,y=new Date().getFullYear();r
 function getCurQ(){const m=new Date().getMonth()+1;if(m>=10)return Q_LABELS[0];if(m<=3)return Q_LABELS[1];if(m<=6)return Q_LABELS[2];return Q_LABELS[3];}
 function getQNum(q){const s=String(q);if(s.includes('1'))return'1';if(s.includes('2'))return'2';if(s.includes('3'))return'3';if(s.includes('4'))return'4';return'?';}
 function qBadgeClass(q){const n=getQNum(q);return{'1':'b-q1','2':'b-q2','3':'b-q3','4':'b-q4'}[n]||'b-o';}
-
+function updateHintDisplay(){} // placeholder — ป้องกัน ReferenceError
 // ═══ BOOT ═══
 window.addEventListener('DOMContentLoaded', () => {
   setInterval(()=>{const el=document.getElementById('CLK');if(el)el.textContent=new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});},1000);
@@ -1289,8 +1289,30 @@ function renderDash(){
   const mx=Math.max(...vals,1);
   const dc=document.getElementById('DashChart');
   if(dc)dc.innerHTML=Q_LABELS.map((q,i)=>{const h=Math.round((vals[i]/mx)*130);return`<div class="bc"><div class="bv">${vals[i]}</div><div class="bf ${Q_COLORS[i]}" style="height:${h}px"></div><div class="bl">Q${i+1}<br><span style="font-size:9px;color:var(--s300)">${vals[i]} ใบ</span></div></div>`;}).join('');
-  const dt=document.getElementById('DashTop');
-  if(dt)dt.innerHTML='<div class="es"><div class="ei">📊</div><p>โหลดข้อมูล Top Items จาก Statistics ได้</p></div>';
+  const dt = document.getElementById('DashTop');
+if(dt){
+  dt.innerHTML = '<div style="text-align:center;padding:20px"><div class="spin" style="margin:0 auto 8px"></div><div style="font-size:11.5px;color:var(--s400)">กำลังโหลด...</div></div>';
+  GS.call('getStatistics', String(fy)).then(raw => {
+    const stats = JSON.parse(raw);
+    if(!stats.topItems || !stats.topItems.length){
+      dt.innerHTML = '<div class="es"><div class="ei">📊</div><p>ยังไม่มีข้อมูลการเบิก</p></div>';
+      return;
+    }
+    const maxQty = stats.topItems[0].qty || 1;
+    dt.innerHTML = stats.topItems.slice(0,5).map((it,i) => `
+      <div class="pr">
+        <div class="pm">
+          <span class="pn">${i+1}. ${it.name}</span>
+          <span class="pv">${it.qty} หน่วย</span>
+        </div>
+        <div class="pt2">
+          <div class="pf" style="width:${Math.round(it.qty/maxQty*100)}%"></div>
+        </div>
+      </div>`).join('');
+  }).catch(() => {
+    dt.innerHTML = '<div class="es"><div class="ei">📊</div><p>โหลดไม่สำเร็จ</p></div>';
+  });
+}
   const pendR=ALL_REQ.filter(r=>r.status==='รอดำเนินการ').slice(0,5);
   const dp=document.getElementById('DashPend');
   if(dp)dp.innerHTML=!pendR.length?`<div class="es"><div class="ei">✅</div><p>ไม่มีรออนุมัติ</p></div>`
@@ -1716,6 +1738,20 @@ async function loadStats(){
       </div>`;
     });
     document.getElementById('StDept').innerHTML=deptHtml||`<div class="es"><div class="ei">🏢</div><p>ยังไม่มีข้อมูล</p></div>`;
+    // ── Top 10 วัสดุเบิกมากสุด ──
+    const stTop = document.getElementById('StTop');
+    if(stTop){
+      if(!d.topItems || !d.topItems.length){
+        stTop.innerHTML = '<div class="es"><div class="ei">📊</div><p>ยังไม่มีข้อมูล</p></div>';
+      } else {
+        const maxQ = d.topItems[0].qty || 1;
+        stTop.innerHTML = d.topItems.slice(0,10).map((it,i) => `
+          <div class="pr">
+            <div class="pm"><span class="pn">${i+1}. ${it.name}</span><span class="pv">${it.qty} หน่วย</span></div>
+            <div class="pt2"><div class="pf" style="width:${Math.round(it.qty/maxQ*100)}%"></div></div>
+          </div>`).join('');
+      }
+    }
     document.getElementById('StLowTB').innerHTML=!d.lowStock.length?`<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--s300)">✅ ไม่มีวัสดุใกล้หมด</td></tr>`:d.lowStock.map(it=>`<tr><td style="font-weight:700">${it.name}</td><td style="font-family:'IBM Plex Mono';font-weight:800;color:var(--red);text-align:center">${it.qty}</td><td style="font-family:'IBM Plex Mono';text-align:center">${it.minQty}</td></tr>`).join('');
   }catch(e){showL(false);toast('โหลดสถิติล้มเหลว: '+e.message,'er');}
 }
