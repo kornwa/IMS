@@ -11,6 +11,13 @@
 //     อ่านโลโก้จาก Drive โดยตรง แปลงเป็น base64 ฝังใน PDF
 //     (แก้ปัญหาโลโก้ไม่ขึ้นเพราะ UrlFetchApp ดึง Drive URL ไม่ได้)
 //   - uploadLogoFile() บันทึก logo_file_id ลง Settings ด้วย
+//
+//   📌 v5.2.5 Patches (แก้ปัญหาแจ้งเตือน LINE เบิ้ล):
+//   - submitRequest() ใช้ LockService.getScriptLock() กันสอง
+//     คำขอรันพร้อมกัน (race condition) ที่ทำให้สร้างใบเบิกซ้ำ
+//   - submitRequest() เช็คใบเบิกซ้ำย้อนหลัง 30 วินาที
+//     (ผู้เบิก+หน่วยงาน+วัตถุประสงค์+รายการวัสดุตรงกันหมด)
+//     ถ้าซ้ำ → คืนเลขที่ใบเบิกเดิม ไม่สร้างแถวใหม่ ไม่แจ้งเตือนซ้ำ
 // ╚══════════════════════════════════════════════════════════╝
 
 const SS_ID  = '1-c70WvbIXk0KsxW8Gy2c1mHEvYUGMIWyc6EGccGIsME';
@@ -1374,22 +1381,89 @@ function getRequests() { return JSON.stringify(rows(SH.REQUESTS).reverse()); }
 function getMyRequests(name, department) { return JSON.stringify(rows(SH.REQUESTS).filter(r => r.requesterName === name && r.department === department).reverse()); }
 function getRequestDetails(rid) { return JSON.stringify(rows(SH.DETAIL).filter(d => d.requestId === rid)); }
 
+// ══════════════════════════════════════════════════════════
+//  ✅ PATCHED v5.2.5: submitRequest
+//  — ใช้ LockService.getScriptLock() กันสองคำขอรันพร้อมกัน
+//    (race condition ที่ทำให้เกิดใบเบิกซ้ำ 2 เลขที่)
+//  — เช็คใบเบิกซ้ำย้อนหลัง 30 วินาที (ผู้เบิก+หน่วยงาน+
+//    วัตถุประสงค์+รายการวัสดุตรงกันหมด) ถ้าซ้ำ → ไม่สร้างใหม่
+//    ไม่แจ้งเตือนซ้ำ แค่คืนเลขที่ใบเบิกเดิมกลับไป
+// ══════════════════════════════════════════════════════════
 function submitRequest(json) {
-  const p = JSON.parse(json);
-  const d = new Date();
-  const reqId = generateRequestId(p.department);
-  const req = { requestId: reqId, requestDate: now(), requesterName: p.requesterName, department: p.department, purpose: p.purpose, status: 'รอดำเนินการ', totalItems: p.items.length, note: p.note || '', createdAt: d.toISOString(), fiscalYear: fyOf(d), quarter: qOf(d), approvedBy: '', approvedAt: '', rejReason: '' };
-  addRow(SH.REQUESTS, req);
-  const dets = [];
-  p.items.forEach((it, i) => {
-    const det = { detailId: reqId + '_' + String(i + 1).padStart(2, '0'), requestId: reqId, itemId: it.id, itemName: it.name, unit: it.unit, qtyRequested: it.qty, qtyApproved: 0, note: it.note || '' };
-    addRow(SH.DETAIL, det); dets.push(det);
-  });
-  const users = rows(SH.USERS);
-  const u = users.find(x => x.name === p.requesterName && x.department === p.department);
-  if (u) setRow(SH.USERS, 'userId', u.userId, { totalRequests: (Number(u.totalRequests) || 0) + 1 });
-  try { notifyNewRequest(req, dets); } catch(e) { Logger.log('LINE notify error: ' + e.message); }
-  return JSON.stringify({ success: true, requestId: reqId, fiscalYear: fyOf(d), quarter: qOf(d) });
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // รอสูงสุด 15 วินาที ถ้ามีคำขออื่นกำลังรันอยู่
+  } catch (e) {
+    return JSON.stringify({ success: false, error: 'ระบบกำลังประมวลผลคำขออื่นอยู่ กรุณาลองใหม่อีกครั้งใน 2-3 วินาที' });
+  }
+
+  try {
+    const p = JSON.parse(json);
+
+    // ── ✅ กันส่งซ้ำ (double submit / retry) — เช็คย้อนหลัง 30 วินาที ──
+    const DUP_WINDOW_MS = 30 * 1000;
+    const nowMs = Date.now();
+    const recentSameUser = rows(SH.REQUESTS).filter(r => {
+      if (r.requesterName !== p.requesterName) return false;
+      if (r.department   !== p.department)     return false;
+      if (r.purpose       !== p.purpose)        return false;
+      if (!r.createdAt) return false;
+      const t = new Date(r.createdAt).getTime();
+      return !isNaN(t) && (nowMs - t) < DUP_WINDOW_MS;
+    });
+
+    if (recentSameUser.length) {
+      const dup = recentSameUser.find(r => {
+        const existingDets = rows(SH.DETAIL).filter(d => d.requestId === r.requestId);
+        if (existingDets.length !== (p.items || []).length) return false;
+        return (p.items || []).every(it =>
+          existingDets.some(d => d.itemName === it.name && Number(d.qtyRequested) === Number(it.qty))
+        );
+      });
+      if (dup) {
+        // ⚠️ พบว่าเป็นการส่งซ้ำภายใน 30 วิ — ไม่สร้างใบเบิกใหม่ ไม่แจ้งเตือนซ้ำ
+        Logger.log('⚠️ ตรวจพบการส่งใบเบิกซ้ำ — คืนเลขที่เดิม: ' + dup.requestId);
+        return JSON.stringify({
+          success: true,
+          requestId: dup.requestId,
+          fiscalYear: dup.fiscalYear,
+          quarter: dup.quarter,
+          duplicate: true
+        });
+      }
+    }
+
+    // ── สร้างใบเบิกใหม่ตามปกติ ──
+    const d = new Date();
+    const reqId = generateRequestId(p.department);
+    const req = {
+      requestId: reqId, requestDate: now(), requesterName: p.requesterName,
+      department: p.department, purpose: p.purpose, status: 'รอดำเนินการ',
+      totalItems: p.items.length, note: p.note || '', createdAt: d.toISOString(),
+      fiscalYear: fyOf(d), quarter: qOf(d), approvedBy: '', approvedAt: '', rejReason: ''
+    };
+    addRow(SH.REQUESTS, req);
+
+    const dets = [];
+    p.items.forEach((it, i) => {
+      const det = {
+        detailId: reqId + '_' + String(i + 1).padStart(2, '0'), requestId: reqId,
+        itemId: it.id, itemName: it.name, unit: it.unit,
+        qtyRequested: it.qty, qtyApproved: 0, note: it.note || ''
+      };
+      addRow(SH.DETAIL, det); dets.push(det);
+    });
+
+    const users = rows(SH.USERS);
+    const u = users.find(x => x.name === p.requesterName && x.department === p.department);
+    if (u) setRow(SH.USERS, 'userId', u.userId, { totalRequests: (Number(u.totalRequests) || 0) + 1 });
+
+    try { notifyNewRequest(req, dets); } catch (e) { Logger.log('LINE notify error: ' + e.message); }
+
+    return JSON.stringify({ success: true, requestId: reqId, fiscalYear: fyOf(d), quarter: qOf(d) });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function approveRequest(json) {
