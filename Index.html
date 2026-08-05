@@ -1917,14 +1917,22 @@ function festIsInSeason(){
 }
 
 function initFestivalTheme(){
+  const inSeason = festIsInSeason();
+  if (!inSeason) {
+    // พ้นช่วงเทศกาลแล้ว: บังคับปิดเสมอ และล้างค่าที่เคยเลือกไว้ ให้ปีหน้าเริ่มถามใหม่
+    localStorage.removeItem(FEST_KEY);
+    setFestivalTheme(false, false);
+    renderFestActions();
+    return;
+  }
   const override = localStorage.getItem(FEST_KEY);
-  const shouldBeOn = override === 'on' ? true : (override === 'off' ? false : festIsInSeason());
+  const shouldBeOn = override === 'off' ? false : true; // ในช่วงเทศกาล: ค่าเริ่มต้นคือเปิด เว้นแต่เคยเลือกปิดไว้
   setFestivalTheme(shouldBeOn, false);
   renderFestCountdown();
   renderFestActions();
   const dismissedDate = sessionStorage.getItem(FEST_DISMISS_KEY);
   const todayStr = new Date().toDateString();
-  if (festIsInSeason() && dismissedDate !== todayStr) {
+  if (dismissedDate !== todayStr) {
     const card = document.getElementById('festCard');
     if (card) card.style.display = 'flex';
   }
