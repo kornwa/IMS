@@ -572,12 +572,26 @@ body.festival-on{
   --primary-10:var(--fest-blue-10);
   --primary-20:var(--fest-blue-20);
 }
-body.festival-on html{
-  background:linear-gradient(150deg,#eef5fc 0%,#e6f0fa 25%,#dde9f7 55%,#d4e2f4 80%,#cbdaf0 100%) fixed!important;
+body.festival-on{
+  background:
+    radial-gradient(ellipse 760px 480px at 12% -8%, rgba(255,233,168,.30) 0%, transparent 60%),
+    radial-gradient(ellipse 680px 580px at 106% 12%, rgba(165,206,247,.40) 0%, transparent 62%),
+    radial-gradient(ellipse 900px 680px at 50% 122%, rgba(140,185,240,.24) 0%, transparent 65%),
+    linear-gradient(150deg,#f6fafe 0%,#eef6fd 22%,#e2f0fb 46%,#d3e6f9 72%,#c3daf6 100%)
+    fixed!important;
 }
-body.festival-on #bg-blob-1{background:radial-gradient(circle,rgba(43,108,176,.14) 0%,rgba(91,155,213,.06) 50%,transparent 68%)!important;}
-body.festival-on #bg-blob-2{background:radial-gradient(circle,rgba(91,155,213,.10) 0%,rgba(43,108,176,.04) 52%,transparent 68%)!important;}
-body.festival-on #bg-blob-3{background:radial-gradient(circle,rgba(43,108,176,.07) 0%,transparent 65%)!important;}
+body.festival-on html{
+  background:#f6fafe fixed!important;
+}
+#festBgPattern{
+  position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .5s;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130'%3E%3Cg fill='%235b9bd5'%3E%3Ccircle cx='65' cy='38' r='13'/%3E%3Ccircle cx='87' cy='55' r='13'/%3E%3Ccircle cx='79' cy='81' r='13'/%3E%3Ccircle cx='51' cy='81' r='13'/%3E%3Ccircle cx='43' cy='55' r='13'/%3E%3Ccircle cx='65' cy='59' r='9' fill='%23d4af37'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:130px 130px;background-repeat:repeat;
+}
+body.festival-on #festBgPattern{opacity:.05;}
+body.festival-on #bg-blob-1{background:radial-gradient(circle,rgba(255,224,153,.28) 0%,rgba(212,175,55,.08) 50%,transparent 70%)!important;}
+body.festival-on #bg-blob-2{background:radial-gradient(circle,rgba(140,185,240,.22) 0%,rgba(140,185,240,.06) 52%,transparent 68%)!important;}
+body.festival-on #bg-blob-3{background:radial-gradient(circle,rgba(165,206,247,.20) 0%,transparent 68%)!important;}
 body.festival-on .greeting-banner{
   background:linear-gradient(135deg,#0d2137 0%,#1a4971 40%,#2b6cb0 80%,#5b9bd5 100%)!important;
   box-shadow:0 12px 40px rgba(43,108,176,.30),0 4px 16px rgba(0,0,0,.15)!important;
@@ -691,7 +705,7 @@ body.festival-on .add-btn{
 </style>
 </head>
 <body>
-<div id="bg-blob-1"></div><div id="bg-blob-2"></div><div id="bg-blob-3"></div>
+<div id="bg-blob-1"></div><div id="bg-blob-2"></div><div id="bg-blob-3"></div><div id="festBgPattern"></div>
 <div id="loading"><div class="spinner"></div><div id="loadTxt">กำลังโหลด...</div></div>
 <div id="toast-wrap"></div>
 <div id="festPetals"></div>
