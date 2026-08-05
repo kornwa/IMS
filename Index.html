@@ -555,12 +555,151 @@ html {
   background:radial-gradient(circle,rgba(232,93,4,.07) 0%,transparent 65%);
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   FESTIVAL THEME — วันแม่แห่งชาติ (12 สิงหาคม)
+   สลับสีธีมฟ้า/ม่วงและตกแต่งด้วยดอกมะลิลอยตามฤดูกาล
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --fest-blue:#2b6cb0;--fest-blue-dark:#1a4971;--fest-blue-light:#5b9bd5;
+  --fest-blue-10:rgba(43,108,176,.10);--fest-blue-20:rgba(43,108,176,.20);
+  --fest-gold:#d4af37;
+}
+body.festival-on{
+  --primary:var(--fest-blue);
+  --primary-dark:var(--fest-blue-dark);
+  --primary-light:var(--fest-blue-light);
+  --primary-10:var(--fest-blue-10);
+  --primary-20:var(--fest-blue-20);
+}
+body.festival-on html{
+  background:linear-gradient(150deg,#eef5fc 0%,#e6f0fa 25%,#dde9f7 55%,#d4e2f4 80%,#cbdaf0 100%) fixed!important;
+}
+body.festival-on #bg-blob-1{background:radial-gradient(circle,rgba(43,108,176,.14) 0%,rgba(91,155,213,.06) 50%,transparent 68%)!important;}
+body.festival-on #bg-blob-2{background:radial-gradient(circle,rgba(91,155,213,.10) 0%,rgba(43,108,176,.04) 52%,transparent 68%)!important;}
+body.festival-on #bg-blob-3{background:radial-gradient(circle,rgba(43,108,176,.07) 0%,transparent 65%)!important;}
+body.festival-on .greeting-banner{
+  background:linear-gradient(135deg,#0d2137 0%,#1a4971 40%,#2b6cb0 80%,#5b9bd5 100%)!important;
+  box-shadow:0 12px 40px rgba(43,108,176,.30),0 4px 16px rgba(0,0,0,.15)!important;
+}
+body.festival-on .greeting-banner::before{
+  background:radial-gradient(circle,rgba(150,200,255,.18) 0%,transparent 68%)!important;
+}
+body.festival-on .cart-btn{
+  background:linear-gradient(135deg,var(--fest-blue),var(--fest-blue-dark))!important;
+  box-shadow:0 3px 10px rgba(43,108,176,.3)!important;
+}
+body.festival-on .btn-primary{
+  background:linear-gradient(135deg,var(--fest-blue),var(--fest-blue-dark))!important;
+  box-shadow:0 4px 14px rgba(43,108,176,.35)!important;
+}
+body.festival-on .sidebar-item.on{
+  background:var(--fest-blue)!important;
+  box-shadow:0 4px 14px rgba(43,108,176,.4)!important;
+}
+body.festival-on .add-btn{
+  background:linear-gradient(135deg,#5b9bd5 0%,#2b6cb0 48%,#1a4971 100%)!important;
+  box-shadow:0 8px 18px rgba(43,108,176,.30),inset 0 1px 0 rgba(255,255,255,.22)!important;
+}
+
+/* ─── Mother's Day banner card ─────────────────────────────── */
+.fest-card{
+  position:relative;overflow:hidden;border-radius:18px;padding:16px 18px;
+  margin-bottom:18px;color:#fff;display:flex;align-items:center;gap:14px;
+  background:linear-gradient(120deg,#0d2137 0%,#1a4971 45%,#2b6cb0 100%);
+  box-shadow:0 10px 32px rgba(43,108,176,.28),0 2px 8px rgba(0,0,0,.12);
+  cursor:default;
+}
+.fest-card::after{
+  content:'';position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle,rgba(212,175,55,.20) 0%,transparent 70%);
+}
+.fest-card .fest-ico{font-size:34px;flex-shrink:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));z-index:1}
+.fest-card .fest-body{flex:1;min-width:0;z-index:1}
+.fest-card .fest-title{font-size:14.5px;font-weight:800;letter-spacing:.2px}
+.fest-card .fest-sub{font-size:12px;color:rgba(255,255,255,.82);margin-top:2px;line-height:1.5}
+.fest-card .fest-count{
+  z-index:1;flex-shrink:0;text-align:center;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:7px 12px;backdrop-filter:blur(6px);
+}
+.fest-card .fest-count .fc-num{font-family:var(--mono);font-size:19px;font-weight:800;line-height:1;color:#ffe9a8}
+.fest-card .fest-count .fc-lbl{font-size:9px;color:rgba(255,255,255,.75);margin-top:2px;letter-spacing:.4px}
+.fest-close{
+  position:absolute;top:8px;right:8px;z-index:2;width:22px;height:22px;border-radius:50%;
+  background:rgba(255,255,255,.16);border:none;color:#fff;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.fest-close:hover{background:rgba(255,255,255,.28);}
+
+/* ─── Suggestion buttons inside festival banner ────────────── */
+.fest-actions{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.fest-btn{
+  z-index:1;border:none;border-radius:9px;padding:6px 13px;font-size:11.5px;font-weight:700;
+  cursor:pointer;font-family:var(--font);transition:all .18s;white-space:nowrap;
+}
+.fest-btn:active{transform:scale(.96);}
+.fest-btn-on{background:#ffe9a8;color:#5a3d00;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.fest-btn-on:hover{background:#fff3cc;}
+.fest-btn-off{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.30);}
+.fest-btn-off:hover{background:rgba(255,255,255,.24);}
+
+/* ─── Floating jasmine petals (ดอกมะลิ) ────────────────────── */
+#festPetals{position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden;display:none}
+#festPetals.on{display:block}
+.fest-petal{position:absolute;top:-24px;opacity:.85;will-change:transform;animation:festPetalFall linear infinite;filter:drop-shadow(0 2px 3px rgba(0,0,0,.10))}
+@keyframes festPetalFall{
+  0%{transform:translate3d(0,-6vh,0) rotate(0deg);opacity:0}
+  8%{opacity:.9}
+  92%{opacity:.85}
+  100%{transform:translate3d(var(--fp-drift,0px),108vh,0) rotate(var(--fp-spin,360deg));opacity:0}
+}
+
+/* ─── Festival toggle switch (topbar) ──────────────────────── */
+.fest-toggle-btn{
+  width:36px;height:36px;border-radius:9px;border:1.5px solid var(--border-med);
+  background:var(--surface);color:var(--text-2);font-size:16px;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0;
+}
+.fest-toggle-btn.on{
+  background:linear-gradient(135deg,#2b6cb0,#1a4971);color:#fff;border-color:transparent;
+  box-shadow:0 3px 10px rgba(43,108,176,.35);
+}
+
+/* ─── Tutorial coach-mark for theme toggle ─────────────────── */
+#festTutorial{
+  position:fixed;z-index:9997;width:264px;max-width:calc(100vw - 32px);
+  top:calc(var(--topbar-h) + var(--sat) + 10px);left:16px;
+  background:linear-gradient(135deg,#1a4971,#2b6cb0);color:#fff;border-radius:14px;
+  padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.28),0 4px 12px rgba(43,108,176,.3);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease;
+}
+#festTutorial.on{opacity:1;visibility:visible;pointer-events:auto;animation:festTipIn .4s cubic-bezier(.34,1.56,.64,1);}
+#festTutorial::before{
+  content:'';position:absolute;top:-7px;left:var(--ft-arrow-x,50%);width:14px;height:14px;
+  background:#1a4971;transform:rotate(45deg);border-radius:3px 0 0 0;margin-left:-7px;
+}
+@keyframes festTipIn{from{opacity:0;transform:translateY(-10px) scale(.94)}to{opacity:1;transform:none}}
+.ft-title{font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.ft-body{font-size:12px;line-height:1.55;color:rgba(255,255,255,.9)}
+.ft-actions{display:flex;justify-content:flex-end;margin-top:10px}
+.ft-btn{
+  background:#ffe9a8;color:#5a3d00;border:none;border-radius:8px;padding:6px 14px;
+  font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .18s;
+}
+.ft-btn:hover{background:#fff3cc;}
+.ft-btn:active{transform:scale(.96);}
 </style>
 </head>
 <body>
 <div id="bg-blob-1"></div><div id="bg-blob-2"></div><div id="bg-blob-3"></div>
 <div id="loading"><div class="spinner"></div><div id="loadTxt">กำลังโหลด...</div></div>
 <div id="toast-wrap"></div>
+<div id="festPetals"></div>
+<div id="festTutorial">
+  <div class="ft-title">🎨 เปลี่ยนธีมได้ที่นี่</div>
+  <div class="ft-body">กดปุ่มนี้เพื่อเปิด/ปิดธีมตกแต่งตามเทศกาลของระบบ</div>
+  <div class="ft-actions"><button class="ft-btn" onclick="dismissFestTutorial()">เข้าใจแล้ว</button></div>
+</div>
 
 <div id="successOverlay">
   <div class="confetti-layer" id="confettiLayer"></div>
@@ -729,6 +868,7 @@ html {
     </div>
     <div class="tb-right">
       <button class="cart-btn" onclick="goPage('cart')">🛒 <span class="cart-btn-count" id="cart-top-count">0</span></button>
+      <button class="fest-toggle-btn" id="festToggleBtn" onclick="toggleFestivalTheme()" title="ธีมวันแม่แห่งชาติ">🌼</button>
       <button class="tb-user-btn" onclick="doLogout()" title="ออกจากระบบ">👤</button>
     </div>
   </div>
@@ -746,6 +886,19 @@ html {
         <div class="greeting-badge" id="greeting-fy">📅 ปีงบ –</div>
       </div>
       <div id="alert-zone"></div>
+      <div class="fest-card" id="festCard" style="display:none">
+        <button class="fest-close" onclick="dismissFestCard()" title="ปิด">✕</button>
+        <div class="fest-ico">🌼</div>
+        <div class="fest-body">
+          <div class="fest-title">วันแม่แห่งชาติ 12 สิงหาคม</div>
+          <div class="fest-sub">ระบบตกแต่งธีมพิเศษต้อนรับเทศกาลวันแม่ ด้วยดอกมะลิและโทนสีฟ้า</div>
+          <div class="fest-actions" id="festActions"></div>
+        </div>
+        <div class="fest-count">
+          <div class="fc-num" id="festCountNum">–</div>
+          <div class="fc-lbl">วันที่เหลือ</div>
+        </div>
+      </div>
       <div class="kpi-grid">
         <div class="kpi-card" onclick="goPage('myreq')"><div class="kpi-ico">📋</div><div><div class="kpi-label">ใบเบิกทั้งหมด</div><div class="kpi-value" id="hs-total">–</div></div></div>
         <div class="kpi-card" onclick="goPage('myreq')"><div class="kpi-ico" style="background:var(--green-bg)">✅</div><div><div class="kpi-label">อนุมัติแล้ว</div><div class="kpi-value" id="hs-app" style="color:var(--green)">–</div></div></div>
@@ -990,6 +1143,7 @@ function closeDrawer(){document.getElementById('drawer').classList.remove('open'
 window.addEventListener('DOMContentLoaded', () => {
   loadBranding();
   loadUserNames();
+  initFestivalTheme();
   const saved = sessionStorage.getItem('user_v3');
   if (saved) { USER = JSON.parse(saved); bootApp(); }
   const fy = getCurrentFY();
@@ -1083,6 +1237,7 @@ function doLogin(){
 }
 
 function bootApp(){
+  maybeShowFestTutorial();
   document.getElementById('loginWrap').classList.add('gone');
   document.getElementById('app').classList.add('show');
   document.getElementById('req-name').value=USER.name;
@@ -1742,6 +1897,174 @@ function getDemoItems(){
     {id:'I010',name:'แบตเตอรี่ AA',category:'วัสดุงานช่าง',unit:'แพ็ค',qty:10,minQty:4,imageUrl:'',description:''},
   ];
 }
+
+/* ══════════════════════════════════════════════════════════════
+   FESTIVAL THEME — วันแม่แห่งชาติ (12 สิงหาคม)
+   ══════════════════════════════════════════════════════════════ */
+const FEST_KEY = 'festivalThemeOverride';   // 'on' | 'off' | null(=auto)
+const FEST_DISMISS_KEY = 'festivalCardDismissedDate';
+let festPetalTimer = null;
+
+function festGetFestivalWindow(){
+  const y = new Date().getFullYear();
+  return { start: new Date(y,7,1,0,0,0), end: new Date(y,7,13,23,59,59), target: new Date(y,7,12,0,0,0) };
+}
+
+function festIsInSeason(){
+  const { start, end } = festGetFestivalWindow();
+  const now = new Date();
+  return now >= start && now <= end;
+}
+
+function initFestivalTheme(){
+  const override = localStorage.getItem(FEST_KEY);
+  const shouldBeOn = override === 'on' ? true : (override === 'off' ? false : festIsInSeason());
+  setFestivalTheme(shouldBeOn, false);
+  renderFestCountdown();
+  renderFestActions();
+  const dismissedDate = sessionStorage.getItem(FEST_DISMISS_KEY);
+  const todayStr = new Date().toDateString();
+  if (festIsInSeason() && dismissedDate !== todayStr) {
+    const card = document.getElementById('festCard');
+    if (card) card.style.display = 'flex';
+  }
+}
+
+const FEST_TUTORIAL_KEY = 'festivalTutorialSeen';
+
+function maybeShowFestTutorial(){
+  if (localStorage.getItem(FEST_TUTORIAL_KEY)) return;
+  const tip = document.getElementById('festTutorial');
+  const btn = document.getElementById('festToggleBtn');
+  if (!tip || !btn) return;
+  setTimeout(() => { positionFestTutorial(); tip.classList.add('on'); }, 1400);
+}
+
+function positionFestTutorial(){
+  const tip = document.getElementById('festTutorial');
+  const btn = document.getElementById('festToggleBtn');
+  if (!tip || !btn) return;
+  const btnRect = btn.getBoundingClientRect();
+  const btnCenterX = btnRect.left + btnRect.width / 2;
+  const margin = 16;
+  const tipW = tip.offsetWidth || 264;
+  let left = btnCenterX - tipW / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - tipW - margin));
+  tip.style.left = left + 'px';
+  const arrowX = btnCenterX - left;
+  tip.style.setProperty('--ft-arrow-x', arrowX + 'px');
+}
+
+function dismissFestTutorial(){
+  localStorage.setItem(FEST_TUTORIAL_KEY, '1');
+  const tip = document.getElementById('festTutorial');
+  if (tip) tip.classList.remove('on');
+}
+
+window.addEventListener('resize', () => {
+  const tip = document.getElementById('festTutorial');
+  if (tip && tip.classList.contains('on')) positionFestTutorial();
+});
+
+function renderFestActions(){
+  const box = document.getElementById('festActions');
+  if (!box) return;
+  const isOn = document.body.classList.contains('festival-on');
+  box.innerHTML = isOn
+    ? '<button class="fest-btn fest-btn-off" onclick="declineFestivalTheme()">ปิดธีมนี้</button>'
+    : '<button class="fest-btn fest-btn-on" onclick="acceptFestivalTheme()">🌼 เปิดธีมนี้</button>'
+    + '<button class="fest-btn fest-btn-off" onclick="declineFestivalTheme()">ไม่ใช้ธีม</button>';
+}
+
+function acceptFestivalTheme(){
+  localStorage.setItem(FEST_KEY, 'on');
+  setFestivalTheme(true, true);
+  renderFestActions();
+  toast('เปิดธีมวันแม่แห่งชาติแล้ว 🌼', 'ok');
+  dismissFestCard();
+}
+
+function declineFestivalTheme(){
+  localStorage.setItem(FEST_KEY, 'off');
+  setFestivalTheme(false, true);
+  renderFestActions();
+  toast('ปิดธีมพิเศษแล้ว', 'info');
+  dismissFestCard();
+}
+
+function toggleFestivalTheme(){
+  const isOn = document.body.classList.contains('festival-on');
+  const next = !isOn;
+  localStorage.setItem(FEST_KEY, next ? 'on' : 'off');
+  setFestivalTheme(next, true);
+  toast(next ? 'เปิดธีมวันแม่แห่งชาติแล้ว 🌼' : 'ปิดธีมพิเศษแล้ว', 'info');
+  renderFestActions();
+  dismissFestTutorial();
+}
+
+function setFestivalTheme(on, userTriggered){
+  document.body.classList.toggle('festival-on', on);
+  const btn = document.getElementById('festToggleBtn');
+  if (btn) btn.classList.toggle('on', on);
+  const petals = document.getElementById('festPetals');
+  if (petals) petals.classList.toggle('on', on);
+  if (on) startFestPetals(); else stopFestPetals();
+  if (!on && userTriggered) {
+    const card = document.getElementById('festCard');
+    if (card) card.style.display = 'none';
+  }
+}
+
+function dismissFestCard(){
+  const card = document.getElementById('festCard');
+  if (card) card.style.display = 'none';
+  sessionStorage.setItem(FEST_DISMISS_KEY, new Date().toDateString());
+}
+
+function renderFestCountdown(){
+  const el = document.getElementById('festCountNum');
+  if (!el) return;
+  const { target } = festGetFestivalWindow();
+  const now = new Date();
+  const diffMs = target.setHours(0,0,0,0) - new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+  if (diffDays > 0) el.textContent = diffDays;
+  else if (diffDays === 0) el.textContent = '🎉';
+  else el.textContent = '–';
+}
+
+function startFestPetals(){
+  const layer = document.getElementById('festPetals');
+  if (!layer || festPetalTimer) return;
+  const glyphs = ['❀','✿','❁'];
+  function spawn(){
+    const el = document.createElement('div');
+    el.className = 'fest-petal';
+    const size = 12 + Math.random()*12;
+    const left = Math.random()*100;
+    const drift = (Math.random()*120-60).toFixed(0)+'px';
+    const spin = (Math.round(Math.random()*360)+180)+'deg';
+    const dur = (9 + Math.random()*8).toFixed(2)+'s';
+    el.style.left = left+'vw';
+    el.style.fontSize = size+'px';
+    el.style.color = Math.random() > 0.3 ? '#ffffff' : '#ffe9a8';
+    el.style.setProperty('--fp-drift', drift);
+    el.style.setProperty('--fp-spin', spin);
+    el.style.animationDuration = dur;
+    el.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), parseFloat(dur)*1000 + 500);
+  }
+  festPetalTimer = setInterval(spawn, 900);
+  for (let i=0;i<4;i++) setTimeout(spawn, i*300);
+}
+
+function stopFestPetals(){
+  if (festPetalTimer) { clearInterval(festPetalTimer); festPetalTimer = null; }
+  const layer = document.getElementById('festPetals');
+  if (layer) layer.innerHTML = '';
+}
+
 </script>
 </body>
 </html>
