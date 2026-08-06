@@ -1510,47 +1510,62 @@ function renderCatalog(items){
 }
 
 document.addEventListener('click', function(e) {
-  const card = e.target.closest('.item-card');
-  if (!card) return;
-  if (!card.closest('#catalog-grid')) return;
-  const itemId = card.dataset.itemId;
-  if (!itemId) return;
-  const it = ALL_ITEMS.find(x => String(x.id) === String(itemId));
-  if (!it) { toast('ไม่พบรายการวัสดุ','err'); return; }
-  if (Number(it.qty) <= 0) { toast('วัสดุนี้หมดคลังแล้ว','err'); return; }
-  openAddCart(it);
+  try {
+    const card = e.target.closest('.item-card');
+    if (!card) return;
+    if (!card.closest('#catalog-grid')) return;
+    const itemId = card.dataset.itemId;
+    if (!itemId) { toast('การ์ดวัสดุนี้ไม่มี item-id กรุณารีเฟรชหน้า','err'); return; }
+    if (!Array.isArray(ALL_ITEMS) || !ALL_ITEMS.length) { toast('ยังไม่ได้โหลดรายการวัสดุ กรุณารอสักครู่แล้วลองใหม่','err'); return; }
+    const it = ALL_ITEMS.find(x => String(x.id) === String(itemId));
+    if (!it) { toast('ไม่พบรายการวัสดุ','err'); return; }
+    if (Number(it.qty) <= 0) { toast('วัสดุนี้หมดคลังแล้ว','err'); return; }
+    openAddCart(it);
+  } catch (err) {
+    console.error('item-card click error:', err);
+    toast('เกิดข้อผิดพลาดตอนเลือกวัสดุ: ' + err.message, 'err');
+  }
 });
 
 function openAddCart(itemOrId) {
-  let it;
-  if (typeof itemOrId === 'object' && itemOrId !== null && itemOrId.id !== undefined) {
-    it = itemOrId;
-  } else {
-    const id = String(itemOrId || '').trim();
-    it = ALL_ITEMS.find(x => String(x.id) === id);
+  try {
+    let it;
+    if (typeof itemOrId === 'object' && itemOrId !== null && itemOrId.id !== undefined) {
+      it = itemOrId;
+    } else {
+      const id = String(itemOrId || '').trim();
+      it = ALL_ITEMS.find(x => String(x.id) === id);
+    }
+    if (!it) { toast('ไม่พบรายการวัสดุ','err'); return; }
+    if (Number(it.qty) <= 0) { toast('วัสดุนี้หมดคลังแล้ว','err'); return; }
+    CUR_ITEM = it;
+    const em = getEm(it.category);
+    const macImg = document.getElementById('mac-img');
+    const macName = document.getElementById('mac-name');
+    const macMeta = document.getElementById('mac-meta');
+    const macQty = document.getElementById('mac-qty');
+    const macNote = document.getElementById('mac-note');
+    const macHint = document.getElementById('mac-hint');
+    if (!macImg || !macName || !macMeta || !macQty) {
+      toast('เกิดข้อผิดพลาด: ไม่พบส่วนประกอบของฟอร์มเพิ่มตะกร้า กรุณารีเฟรชหน้า','err');
+      return;
+    }
+    macImg.innerHTML = it.imageUrl
+      ? `<img src="${escText(it.imageUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=\\'font-size:26px\\'>${em}</span>'">`
+      : `<span style="font-size:26px">${em}</span>`;
+    macName.textContent = it.name;
+    macMeta.textContent = `${it.category||'–'} · คงเหลือ ${it.qty} ${it.unit}`;
+    macQty.value = CART[it.id]?.qty || 1;
+    macQty.max = it.qty;
+    macQty.min = 1;
+    if (macNote) macNote.value = CART[it.id]?.itemNote || '';
+    if (macHint) macHint.textContent = `สูงสุด ${it.qty} ${it.unit}`;
+    openModal('m-addcart');
+    setTimeout(() => macQty.focus(), 320);
+  } catch (err) {
+    console.error('openAddCart error:', err);
+    toast('เกิดข้อผิดพลาดตอนเปิดฟอร์มเพิ่มตะกร้า: ' + err.message, 'err');
   }
-  if (!it) { toast('ไม่พบรายการวัสดุ','err'); return; }
-  if (Number(it.qty) <= 0) { toast('วัสดุนี้หมดคลังแล้ว','err'); return; }
-  CUR_ITEM = it;
-  const em = getEm(it.category);
-  const macImg = document.getElementById('mac-img');
-  const macName = document.getElementById('mac-name');
-  const macMeta = document.getElementById('mac-meta');
-  const macQty = document.getElementById('mac-qty');
-  const macNote = document.getElementById('mac-note');
-  const macHint = document.getElementById('mac-hint');
-  macImg.innerHTML = it.imageUrl
-    ? `<img src="${escText(it.imageUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=\\'font-size:26px\\'>${em}</span>'">`
-    : `<span style="font-size:26px">${em}</span>`;
-  macName.textContent = it.name;
-  macMeta.textContent = `${it.category||'–'} · คงเหลือ ${it.qty} ${it.unit}`;
-  macQty.value = CART[it.id]?.qty || 1;
-  macQty.max = it.qty;
-  macQty.min = 1;
-  if (macNote) macNote.value = CART[it.id]?.itemNote || '';
-  if (macHint) macHint.textContent = `สูงสุด ${it.qty} ${it.unit}`;
-  openModal('m-addcart');
-  setTimeout(() => macQty.focus(), 320);
 }
 
 function changeModalQty(d){
@@ -1896,6 +1911,21 @@ function toast(msg,type='info'){
   document.getElementById('toast-wrap').appendChild(el);
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),280);},3600);
 }
+
+// ── Global error net: แปลง error ที่เคยเงียบให้เห็นทันทีเป็น toast สีแดง ──
+window.addEventListener('error', function(e){
+  try {
+    console.error('Uncaught error:', e.error || e.message, e.filename, e.lineno);
+    toast('เกิดข้อผิดพลาด: ' + (e.message || 'ไม่ทราบสาเหตุ') + (e.lineno ? (' (บรรทัด ' + e.lineno + ')') : ''), 'err');
+  } catch(_) {}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try {
+    const msg = (e.reason && (e.reason.message || e.reason)) || 'ไม่ทราบสาเหตุ';
+    console.error('Unhandled promise rejection:', e.reason);
+    toast('เกิดข้อผิดพลาด (async): ' + msg, 'err');
+  } catch(_) {}
+});
 
 function getDemoItems(){
   return[
