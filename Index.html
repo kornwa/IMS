@@ -1463,6 +1463,12 @@ function escText(v){
 }
 function renderCatalog(items){
   const grid = document.getElementById('catalog-grid');
+  const validItems = (items || []).filter(it => it && it.id !== undefined && it.id !== null && String(it.id).trim() !== '');
+  const skipped = (items || []).length - validItems.length;
+  if (skipped > 0) {
+    console.warn('renderCatalog: ข้ามรายการที่ไม่มี id จำนวน ' + skipped + ' รายการ (ไปแก้ในชีต Items คอลัมน์ id)');
+  }
+  items = validItems;
   if (!items || !items.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><span class="ei">🔍</span><p>ไม่พบรายการ</p></div>`;
     return;
