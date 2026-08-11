@@ -313,6 +313,18 @@ html,body{overflow-x:hidden;max-width:100%}
   .cb{padding:14px}
   .login-box{padding:32px 22px}
   .br-item-row{grid-template-columns:1fr;gap:6px}
+
+  /* ═ Card-style tables (no horizontal scroll) ═ */
+  #pg-approve .tw,#pg-allreq .tw,#pg-items .tw{overflow-x:visible!important}
+  #pg-approve table,#pg-allreq table,#pg-items table{min-width:0!important;width:100%!important;table-layout:auto!important;border-spacing:0}
+  #pg-approve thead,#pg-allreq thead,#pg-items thead{display:none}
+  #pg-approve tbody,#pg-allreq tbody,#pg-items tbody{display:block}
+  #pg-approve tbody tr,#pg-allreq tbody tr,#pg-items tbody tr{display:block;background:#fff;border:1px solid var(--o100);border-radius:12px;padding:10px 13px;margin-bottom:10px;box-shadow:0 2px 8px rgba(249,115,22,.07)}
+  #pg-approve tbody td,#pg-allreq tbody td,#pg-items tbody td{display:flex!important;align-items:center;justify-content:space-between;gap:12px;width:auto!important;max-width:none!important;height:auto!important;min-height:0!important;padding:6px 0!important;border:none!important;border-bottom:1px dashed var(--o100);text-align:right!important;font-size:12.5px;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+  #pg-approve tbody td:last-child,#pg-allreq tbody td:last-child,#pg-items tbody td:last-child{border-bottom:none}
+  #pg-approve tbody td::before,#pg-allreq tbody td::before,#pg-items tbody td::before{content:attr(data-label);font-weight:700;color:var(--s400);font-size:10.5px;text-align:left;flex-shrink:0}
+  #pg-approve tbody td.cb-col,#pg-allreq tbody td.cb-col{justify-content:flex-start}
+  #pg-items tbody td[data-label="รูป"]{justify-content:flex-start}
 }
 @media(max-width:480px){
   .kpi-row{grid-template-columns:1fr!important}
@@ -1250,7 +1262,8 @@ async function doLogin(){
     showErr(res?.error||res?.message||'❌ รหัสผ่านไม่ถูกต้อง');
     const box=document.querySelector('.login-box');if(box){box.style.animation='shake .4s ease';setTimeout(()=>box.style.animation='',450);}
   }catch(e){
-    showErr('เชื่อมต่อระบบไม่ได้ — ตรวจสอบ Deploy');
+    console.error('GS.call failed:',e);
+    showErr('เชื่อมต่อระบบไม่ได้ — ตรวจสอบ Deploy'+(e&&e.message?' ('+e.message+')':''));
   }finally{btn.disabled=false;btn.innerHTML='🔓 เข้าสู่ระบบ Admin';}
 }
 function showErr(msg){const el=document.getElementById('loginErr');el.textContent=msg;el.classList.add('show');}
@@ -1374,7 +1387,7 @@ function renderApprove(data,page){
   const tb=document.getElementById('ApTB');
   const canAp=r=>r.status==='รอดำเนินการ';
   if(!slice.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--s300)">ไม่มีรายการ</td></tr>`;renderPaging('ApPaging',0,1,()=>{});document.getElementById('selAll').checked=false;return;}
-  tb.innerHTML=slice.map(r=>`<tr style="${SELECTED_IDS.has(r.requestId)?'background:rgba(249,115,22,.05)':''}"><td class="cb-col">${canAp(r)?`<input type="checkbox" class="req-cb" value="${r.requestId}" onchange="onCbChange(this)" ${SELECTED_IDS.has(r.requestId)?'checked':''}>`:`<span style="color:var(--s300);font-size:12px">–</span>`}</td><td style="font-family:'IBM Plex Mono';font-size:11px;font-weight:700;color:var(--o600)">${r.requestId}</td><td style="font-size:11.5px;white-space:nowrap">${r.requestDate||''}</td><td><div style="font-weight:700;font-size:12.5px">${r.requesterName}</div><div style="font-size:10.5px;color:var(--s300)">${r.department}</div></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${r.purpose||''}</td><td style="text-align:center;font-weight:700;font-family:'IBM Plex Mono'">${r.totalItems||0}</td><td>${SB(r.status)}</td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn b-out b-xs" onclick="openReq('${r.requestId}',${canAp(r)})">🔍 ดู</button>${canAp(r)?`<button class="btn b-suc b-xs" onclick="quickApp('${r.requestId}')">✅</button><button class="btn b-dan b-xs" onclick="openRej('${r.requestId}')">❌</button>`:''}</div></td></tr>`).join('');
+  tb.innerHTML=slice.map(r=>`<tr style="${SELECTED_IDS.has(r.requestId)?'background:rgba(249,115,22,.05)':''}"><td class="cb-col" data-label="เลือก">${canAp(r)?`<input type="checkbox" class="req-cb" value="${r.requestId}" onchange="onCbChange(this)" ${SELECTED_IDS.has(r.requestId)?'checked':''}>`:`<span style="color:var(--s300);font-size:12px">–</span>`}</td><td data-label="เลขที่ใบเบิก" style="font-family:'IBM Plex Mono';font-size:11px;font-weight:700;color:var(--o600)">${r.requestId}</td><td data-label="วันที่" style="font-size:11.5px;white-space:nowrap">${fmtDate(r.requestDate)}</td><td data-label="ผู้เบิก / หน่วยงาน"><div style="font-weight:700;font-size:12.5px">${r.requesterName}</div><div style="font-size:10.5px;color:var(--s300)">${r.department}</div></td><td data-label="วัตถุประสงค์" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${r.purpose||''}</td><td data-label="รายการ" style="text-align:center;font-weight:700;font-family:'IBM Plex Mono'">${r.totalItems||0}</td><td data-label="สถานะ">${SB(r.status)}</td><td data-label="ดำเนินการ"><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn b-out b-xs" onclick="openReq('${r.requestId}',${canAp(r)})">🔍 ดู</button>${canAp(r)?`<button class="btn b-suc b-xs" onclick="quickApp('${r.requestId}')">✅</button><button class="btn b-dan b-xs" onclick="openRej('${r.requestId}')">❌</button>`:''}</div></td></tr>`).join('');
   renderPaging('ApPaging',pages,pageState.ap,p=>renderApprove(AP_FILTERED,p));
   const allOnPage=slice.filter(r=>r.status==='รอดำเนินการ').every(r=>SELECTED_IDS.has(r.requestId));
   document.getElementById('selAll').checked=allOnPage&&slice.some(r=>r.status==='รอดำเนินการ');
@@ -1539,28 +1552,28 @@ function renderAll(data, page) {
 
     return `
       <tr>
-        <td class="td-req-id">${esc(r.requestId || '-')}</td>
+        <td class="td-req-id" data-label="เลขที่ใบเบิก">${esc(r.requestId || '-')}</td>
 
-        <td class="td-date">${esc(r.requestDate || '-')}</td>
+        <td class="td-date" data-label="วันที่">${esc(fmtDate(r.requestDate))}</td>
 
-        <td>
+        <td data-label="ผู้เบิก / หน่วยงาน">
           <div class="td-main">${esc(r.requesterName || '-')}</div>
           <div class="td-sub">${esc(r.department || '-')}</div>
         </td>
 
-        <td>
+        <td data-label="ไตรมาส">
           <span class="b ${qBadgeClass(quarterText)}" style="font-size:10px">
             ${qNum ? 'Q' + esc(qNum) : '-'}
           </span>
         </td>
 
-        <td class="td-center">${esc(r.fiscalYear || '-')}</td>
+        <td class="td-center" data-label="ปีงบ">${esc(r.fiscalYear || '-')}</td>
 
-        <td class="td-center td-num">${esc(r.totalItems || 0)}</td>
+        <td class="td-center td-num" data-label="รายการ">${esc(r.totalItems || 0)}</td>
 
-        <td>${SB(r.status || '-')}</td>
+        <td data-label="สถานะ">${SB(r.status || '-')}</td>
 
-        <td>
+        <td data-label="ดำเนินการ">
           <div class="td-actions">
             <button class="btn b-out b-xs" onclick="openReq('${rid}',false)">🔍</button>
             <button class="btn b-pri b-xs" onclick="doPDF('${rid}')">📄</button>
@@ -1606,7 +1619,7 @@ async function openReq(rid,canAp){
       <div><div class="dl">ผู้เบิก</div><div class="dv">${req.requesterName}</div></div>
       <div><div class="dl">หน่วยงาน</div><div class="dv">${req.department}</div></div>
       <div><div class="dl">วัตถุประสงค์</div><div class="dv">${req.purpose||'–'}</div></div>
-      <div><div class="dl">วันที่</div><div class="dv">${req.requestDate||'–'}</div></div>
+      <div><div class="dl">วันที่</div><div class="dv">${fmtDate(req.requestDate)||'–'}</div></div>
       <div><div class="dl">ปีงบ</div><div class="dv"><span class="fy-tag">📅 ${req.fiscalYear}</span></div></div>
       <div><div class="dl">ไตรมาส</div><div class="dv"><span class="b ${qBadgeClass(req.quarter)}">${req.quarter||'–'}</span></div></div>
       <div><div class="dl">สถานะ</div><div class="dv">${SB(req.status)}</div></div>
@@ -1664,7 +1677,7 @@ function renderItems(items,page){
     const col=pct<=50?'var(--red)':pct<=100?'var(--gold)':'var(--green)';
     const em=EM[it.category]||'📦';
     const img=it.imageUrl?`<img src="${it.imageUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:8px" onerror="this.outerHTML='<span style=font-size:22px>${em}</span>'">`:`<span style="font-size:22px">${em}</span>`;
-    return`<tr ${low?'style="background:rgba(220,38,38,.04)"':''}><td style="text-align:center">${img}</td><td style="font-family:'IBM Plex Mono';font-size:10.5px;color:var(--s300)">${it.id}</td><td style="font-weight:700;font-size:13px">${it.name}${low?'<span style="margin-left:5px;font-size:9.5px;background:var(--rbg);color:var(--red);padding:1px 6px;border-radius:10px">ใกล้หมด</span>':''}</td><td><span class="b b-o" style="font-size:10.5px">${it.category||'–'}</span></td><td style="font-size:12px">${it.unit||'–'}</td><td><div class="sk-w"><span style="font-family:'IBM Plex Mono';font-size:12px;font-weight:800;color:${low?'var(--red)':'var(--green)'};min-width:30px">${it.qty}</span><div class="sk-t"><div class="sk-f" style="width:${pct}%;background:${col}"></div></div></div></td><td style="font-family:'IBM Plex Mono';font-size:12px">${it.minQty||0}</td><td><div style="display:flex;gap:5px"><button class="btn b-out b-xs" onclick="openItemForm('${it.id}')">✏️</button><button class="btn b-pri b-xs" onclick="adjFromItem('${it.id}')">🔄</button><button class="btn b-dan b-xs" onclick="delItem('${it.id}')">🗑️</button></div></td></tr>`;
+    return`<tr ${low?'style="background:rgba(220,38,38,.04)"':''}><td data-label="รูป" style="text-align:center">${img}</td><td data-label="รหัส" style="font-family:'IBM Plex Mono';font-size:10.5px;color:var(--s300)">${it.id}</td><td data-label="ชื่อวัสดุ" style="font-weight:700;font-size:13px">${it.name}${low?'<span style="margin-left:5px;font-size:9.5px;background:var(--rbg);color:var(--red);padding:1px 6px;border-radius:10px">ใกล้หมด</span>':''}</td><td data-label="หมวดหมู่"><span class="b b-o" style="font-size:10.5px">${it.category||'–'}</span></td><td data-label="หน่วย" style="font-size:12px">${it.unit||'–'}</td><td data-label="สต็อก"><div class="sk-w"><span style="font-family:'IBM Plex Mono';font-size:12px;font-weight:800;color:${low?'var(--red)':'var(--green)'};min-width:30px">${it.qty}</span><div class="sk-t"><div class="sk-f" style="width:${pct}%;background:${col}"></div></div></div></td><td data-label="ขั้นต่ำ" style="font-family:'IBM Plex Mono';font-size:12px">${it.minQty||0}</td><td data-label="จัดการ"><div style="display:flex;gap:5px"><button class="btn b-out b-xs" onclick="openItemForm('${it.id}')">✏️</button><button class="btn b-pri b-xs" onclick="adjFromItem('${it.id}')">🔄</button><button class="btn b-dan b-xs" onclick="delItem('${it.id}')">🗑️</button></div></td></tr>`;
   }).join('');
   renderPaging('ItPaging',pages,pageState.it,p=>renderItems(IT_FILTERED,p));
 }
@@ -2409,6 +2422,18 @@ function SB(s){
   const m={'อนุมัติ':'b-g ✅','รอดำเนินการ':'b-y ⏳','ปฏิเสธ':'b-r ❌','ยกเลิก':'b-r 🚫','อนุมัติบางส่วน':'b-o ⚠️'};
   const v=m[s]||'b-bl ?';const[cls,...rest]=v.split(' ');
   return`<span class="b ${cls}">${rest.join(' ')} ${s}</span>`;
+}
+function fmtDate(v){
+  if(!v)return'-';
+  const s=String(v);
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s))return s;
+  const d=new Date(s);
+  if(isNaN(d))return s;
+  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const day=String(d.getDate()).padStart(2,'0');
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mi=String(d.getMinutes()).padStart(2,'0');
+  return`${day} ${months[d.getMonth()]} ${d.getFullYear()+543} ${hh}:${mi}`;
 }
 </script>
 
