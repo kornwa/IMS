@@ -281,7 +281,44 @@ textarea.fc{resize:vertical;min-height:72px}
 
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}.ms,.tcol{grid-template-columns:1fr}}
-@media(max-width:860px){.sb{width:68px}.main{margin-left:68px}.sb-name,.sb-role,.ni span,.sb-sec,.sb-foot p{display:none}.ni{justify-content:center;padding:9px 0}.ni-ic{margin:0 auto}}
+
+/* ═══ MOBILE (≤860px): off-canvas sidebar drawer ═══ */
+html,body{overflow-x:hidden;max-width:100%}
+.hbtn{display:none;width:36px;height:36px;border-radius:9px;border:1.5px solid var(--o200);background:var(--o50);color:var(--o700);font-size:16px;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.hbtn:active{background:var(--o100)}
+.sb-ov{display:none;position:fixed;inset:0;z-index:95;background:rgba(20,8,0,.5);backdrop-filter:blur(2px)}
+@media(max-width:860px){
+  .hbtn{display:flex}
+  .sb{width:270px;max-width:82vw;transform:translateX(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:200;box-shadow:8px 0 40px rgba(0,0,0,.35)}
+  .sb.open{transform:translateX(0)}
+  .sb-name,.sb-role,.ni span,.sb-sec,.sb-foot p{display:block}
+  .ni{justify-content:flex-start;padding:9px 13px}
+  .ni-ic{margin:0}
+  #adminApp.sb-open .sb-ov{display:block}
+  .main{margin-left:0;width:100%;min-width:0}
+  .topbar{padding:0 14px;height:56px;gap:8px}
+  .pg-title{font-size:14.5px}
+  .pg-crumb{display:none}
+  .adm-tag{display:none}
+  .clk{display:none}
+  .topbar .btn.b-out.b-sm span.hb-txt{display:none}
+  .content{padding:14px}
+  .kpi-row{grid-template-columns:1fr 1fr!important;gap:10px}
+  .kpi{padding:12px 13px}
+  .ki{font-size:20px;margin-bottom:4px}
+  .kv{font-size:19px}
+  .kl{font-size:10px}
+  .ms,.tcol,.fr,.dg{grid-template-columns:1fr!important}
+  .ch{padding:12px 14px}
+  .cb{padding:14px}
+  .login-box{padding:32px 22px}
+  .br-item-row{grid-template-columns:1fr;gap:6px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr!important}
+  .content{padding:12px}
+  .pg-title{font-size:13.5px}
+}
 
 #pg-allreq .tw {
   width: 100%;
@@ -512,7 +549,8 @@ textarea.fc{resize:vertical;min-height:72px}
 
 <!-- ═══ ADMIN APP ═══ -->
 <div id="adminApp">
-  <nav class="sb">
+  <div class="sb-ov" id="sbOv" onclick="closeSidebar()"></div>
+  <nav class="sb" id="sbNav">
     <div class="sb-head">
       <div class="sb-logo" id="sidebarLogo">⚙️</div>
       <div class="sb-name" id="sidebarAppName">ระบบเบิกวัสดุคลัง</div>
@@ -543,14 +581,15 @@ textarea.fc{resize:vertical;min-height:72px}
 
   <div class="main">
     <div class="topbar">
-      <div style="display:flex;align-items:center">
-        <div class="pg-title" id="PgTitle">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <button class="hbtn" onclick="openSidebar()" aria-label="เมนู">☰</button>
+        <div class="pg-title" id="PgTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Dashboard</div>
         <div class="pg-crumb" id="PgCrumb">ภาพรวม</div>
       </div>
       <div style="display:flex;align-items:center;gap:9px">
         <div class="clk" id="CLK"></div>
         <div class="adm-tag">🔐 Admin Mode</div>
-        <button class="btn b-out b-sm" onclick="goUser()">👁️ หน้า User</button>
+        <button class="btn b-out b-sm" onclick="goUser()">👁️<span class="hb-txt"> หน้า User</span></button>
       </div>
     </div>
 
@@ -1242,11 +1281,14 @@ async function bootApp(){
 }
 
 // ═══ NAV ═══
+function openSidebar(){document.getElementById('adminApp').classList.add('sb-open');document.getElementById('sbNav').classList.add('open');}
+function closeSidebar(){document.getElementById('adminApp').classList.remove('sb-open');document.getElementById('sbNav').classList.remove('open');}
 function nav(id){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('act'));
   document.getElementById('pg-'+id).classList.add('on');
   document.getElementById('n-'+id)?.classList.add('act');
+  closeSidebar();
   const m=PMETA[id];if(m){document.getElementById('PgTitle').textContent=m.t;document.getElementById('PgCrumb').textContent=m.c;}
   if(id==='approve'){AP_FILTERED=ALL_REQ.filter(r=>r.status==='รอดำเนินการ');renderApprove(AP_FILTERED,1);}
   if(id==='allreq'){AL_FILTERED=[...ALL_REQ];renderAll(AL_FILTERED,1);}
