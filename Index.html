@@ -1832,9 +1832,55 @@ function loadMyStats(){
     const h=Math.round((vals[i]/maxV)*118);
     return`<div class="bar-col"><div class="bar-val">${vals[i]}</div><div class="bar-fill ${clss[i]}" style="height:${h}px"></div><div class="bar-lbl">Q${i+1}</div></div>`;
   }).join('');
-  document.getElementById('stats-top').innerHTML=fyR.length
-    ?`<div style="text-align:center;padding:16px;font-size:12.5px;color:var(--text-3)">ข้อมูลจากใบเบิกของคุณในปีงบ ${fy}</div>`
-    :`<div class="empty-state"><span class="ei">📊</span><p>ยังไม่มีข้อมูล</p></div>`;
+  loadTopItems(fyR);
+}
+
+function loadTopItems(fyR){
+  const box=document.getElementById('stats-top');
+  if(!fyR.length){
+    box.innerHTML=`<div class="empty-state"><span class="ei">📊</span><p>ยังไม่มีข้อมูล</p></div>`;
+    return;
+  }
+  if(!hasGS){
+    box.innerHTML=`<div class="empty-state"><span class="ei">📊</span><p>ยังไม่มีข้อมูล</p></div>`;
+    return;
+  }
+  box.innerHTML=`<div style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto"></div></div>`;
+  Promise.all(fyR.map(r=>gsCall('getRequestDetails',r.requestId).then(res=>JSON.parse(res)).catch(()=>[])))
+    .then(all=>{
+      const tally={};
+      all.flat().forEach(d=>{
+        const name=d.itemName||'ไม่ระบุ';
+        const unit=d.unit||'';
+        const qty=Number(d.qtyRequested)||0;
+        if(!tally[name])tally[name]={name,unit,count:0,qty:0};
+        tally[name].count+=1;
+        tally[name].qty+=qty;
+      });
+      const top=Object.values(tally).sort((a,b)=>b.count-a.count||b.qty-a.qty).slice(0,5);
+      if(!top.length){
+        box.innerHTML=`<div class="empty-state"><span class="ei">📊</span><p>ยังไม่มีข้อมูล</p></div>`;
+        return;
+      }
+      const maxCount=Math.max(...top.map(t=>t.count),1);
+      box.innerHTML=top.map((t,i)=>`
+        <div style="display:flex;align-items:center;gap:11px;padding:10px 0;${i<top.length-1?'border-bottom:1px solid var(--border)':''}">
+          <div style="width:26px;height:26px;border-radius:8px;background:var(--primary-10);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--primary-dark);flex-shrink:0">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escText(t.name)}</div>
+            <div style="height:5px;border-radius:3px;background:var(--surface-2);margin-top:5px;overflow:hidden">
+              <div style="height:100%;border-radius:3px;background:var(--primary,#f97316);width:${Math.round((t.count/maxCount)*100)}%"></div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:13px;font-weight:700;color:var(--primary-dark)">${t.count} ครั้ง</div>
+            <div style="font-size:10px;color:var(--text-3)">${t.qty} ${escText(t.unit)}</div>
+          </div>
+        </div>`).join('');
+    })
+    .catch(()=>{
+      box.innerHTML=`<div class="empty-state"><span class="ei">⚠️</span><p>โหลดข้อมูลไม่สำเร็จ</p></div>`;
+    });
 }
 
 function renderNotif(){
