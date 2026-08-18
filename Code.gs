@@ -184,7 +184,7 @@ function _apiDispatch(body) {
     loginAdmin, loginUser, initSheets,
     getPublicSettings, getBranding, saveBranding, getBrandingSettings, saveBrandingSettings, resetBrandingDefaults, uploadLogoFile, removeLogo,
     getItems, addItem, updateItem, deleteItem, adjustStock, getStockLog, exportItemsCSV, exportRequestsCSV,
-    getRequests, getMyRequests, getRequestDetails, submitRequest, approveRequest, bulkApproveRequests, rejectRequest, cancelRequest, generateRequestPDF, adminSubmitRequest,
+    getRequests, getMyRequests, getRequestDetails, submitRequest, approveRequest, approveRequestItems, bulkApproveRequests, rejectRequest, cancelRequest, generateRequestPDF, adminSubmitRequest,
     getUsers, getUserNames, updateUserEmail, toggleUser, deleteUser, updateUserActivity, saveUserLineId, updateUserLineId,
     getSettings, saveSetting, getLineToken, saveLineToken, testLineNotify, validateLineToken, getWebhookUrl,
     getStatistics, getAvailableFiscalYears, getScriptUrl, forceResetAdminPassword,
@@ -1480,6 +1480,41 @@ function approveRequest(json) {
   try { notifyRequestStatus(requestId, finalStatus, stockError || notes || ''); } catch(e) {}
   try { sendApprovalEmail(requestId, 'อนุมัติ', stockError); } catch(e) {}
   return JSON.stringify({ success: true, warning: stockError || null });
+}
+
+// ══════════════════════════════════════════════════════════
+//  ✅ อนุมัติแบบรายรายการ (บางรายการอนุมัติ บางรายการไม่อนุมัติ)
+//  items: [{ itemId, qtyApproved }]  — qtyApproved=0 คือไม่อนุมัติรายการนั้น
+// ══════════════════════════════════════════════════════════
+function approveRequestItems(json) {
+  const { requestId, items, operator } = JSON.parse(json);
+  const dets = rows(SH.DETAIL).filter(d => d.requestId === requestId);
+  if (!dets.length) return JSON.stringify({ success: false, error: 'ไม่พบรายการวัสดุของใบเบิกนี้' });
+
+  let stockError = '';
+  dets.forEach(d => {
+    const it = items.find(x => String(x.itemId) === String(d.itemId));
+    const qtyApproved = it ? Math.max(0, Math.min(Number(it.qtyApproved) || 0, Number(d.qtyRequested))) : 0;
+    if (qtyApproved > 0) {
+      const res = JSON.parse(adjustStock(JSON.stringify({ itemId: d.itemId, delta: -qtyApproved, note: 'อนุมัติ(บางส่วน)ใบเบิก ' + requestId, operator: operator || 'Admin' })));
+      if (!res.success) { stockError += d.itemName + ': ' + res.error + '. '; setRow(SH.DETAIL, 'detailId', d.detailId, { qtyApproved: 0 }); }
+      else setRow(SH.DETAIL, 'detailId', d.detailId, { qtyApproved: qtyApproved });
+    } else {
+      setRow(SH.DETAIL, 'detailId', d.detailId, { qtyApproved: 0 });
+    }
+  });
+
+  const finalDets = rows(SH.DETAIL).filter(d => d.requestId === requestId);
+  const allFull = finalDets.every(d => Number(d.qtyApproved) === Number(d.qtyRequested));
+  const anyApproved = finalDets.some(d => Number(d.qtyApproved) > 0);
+  const finalStatus = allFull ? 'อนุมัติ' : (anyApproved ? 'อนุมัติบางส่วน' : 'ปฏิเสธ');
+  const rejReasonIfNone = anyApproved ? '' : 'ไม่อนุมัติรายการวัสดุที่ขอเบิกทั้งหมด';
+
+  setRow(SH.REQUESTS, 'requestId', requestId, { status: finalStatus, approvedBy: operator || 'Admin', approvedAt: now(), rejReason: rejReasonIfNone });
+  try { notifyRequestStatus(requestId, finalStatus, stockError || rejReasonIfNone || ''); } catch (e) {}
+  try { sendApprovalEmail(requestId, finalStatus === 'ปฏิเสธ' ? 'ปฏิเสธ' : 'อนุมัติ', stockError || rejReasonIfNone); } catch (e) {}
+
+  return JSON.stringify({ success: true, warning: stockError || null, status: finalStatus });
 }
 
 function bulkApproveRequests(json) {
