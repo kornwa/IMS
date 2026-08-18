@@ -1157,6 +1157,31 @@ function demoFn(fn, ...args) {
   if (fn==='approveRequest') {const{requestId}=JSON.parse(args[0]);const r=DEMO.reqs.find(x=>x.requestId===requestId);if(r){r.status='อนุมัติ';r.approvedBy='Admin';}return JSON.stringify({success:true});}
   if (fn==='bulkApproveRequests') {const{requestIds}=JSON.parse(args[0]);const results=requestIds.map(rid=>{const r=DEMO.reqs.find(x=>x.requestId===rid);if(r&&r.status==='รอดำเนินการ'){r.status='อนุมัติ';r.approvedBy='Admin';return{requestId:rid,success:true};}return{requestId:rid,success:false};});return JSON.stringify({success:true,results});}
   if (fn==='rejectRequest') {const{requestId,reason}=JSON.parse(args[0]);const r=DEMO.reqs.find(x=>x.requestId===requestId);if(r){r.status='ปฏิเสธ';r.rejReason=reason;}return JSON.stringify({success:true});}
+  if (fn==='approveRequestItems') {
+    const{requestId,items}=JSON.parse(args[0]);
+    const r=DEMO.reqs.find(x=>x.requestId===requestId);
+    const dets=DEMO.details[requestId]||[];
+    if(!r)return JSON.stringify({success:false,error:'ไม่พบใบเบิก'});
+    let warning='';
+    items.forEach(it=>{
+      const d=dets.find(x=>x.itemId===it.itemId);
+      if(d){
+        d.qtyApproved=it.qtyApproved;
+        if(it.qtyApproved>0){
+          const stockItem=DEMO.items.find(x=>x.id===it.itemId);
+          if(stockItem){
+            if(Number(stockItem.qty)<it.qtyApproved){warning='บางรายการสต็อกไม่พอ';}
+            stockItem.qty=Math.max(0,Number(stockItem.qty)-it.qtyApproved);
+          }
+        }
+      }
+    });
+    const allFull=dets.every(d=>Number(d.qtyApproved)===Number(d.qtyRequested));
+    const anyApproved=dets.some(d=>Number(d.qtyApproved)>0);
+    r.status=allFull?'อนุมัติ':(anyApproved?'อนุมัติบางส่วน':'ปฏิเสธ');
+    r.approvedBy='Admin';r.approvedAt=new Date().toLocaleString('th-TH');
+    return JSON.stringify({success:true,warning});
+  }
   if (fn==='adjustStock') {const{itemId,delta,note}=JSON.parse(args[0]);const it=DEMO.items.find(x=>x.id===itemId);if(it){const b=Number(it.qty);const a=b+Number(delta);if(a<0)return JSON.stringify({success:false,error:`สต็อกไม่พอ (${b})`});it.qty=a;DEMO.logs.unshift({logId:'L'+Date.now(),itemName:it.name,action:delta>0?'รับเข้า':'จ่ายออก',qtyBefore:b,qtyChange:delta,qtyAfter:a,note:note||'',operator:'Admin',createdAt:new Date().toISOString()});}return JSON.stringify({success:true,newQty:it?it.qty:0});}
   if (fn==='addItem') {const it=JSON.parse(args[0]);it.id='I'+Date.now();DEMO.items.push(it);return JSON.stringify({success:true,id:it.id});}
   if (fn==='updateItem') {const it=JSON.parse(args[0]);const i=DEMO.items.findIndex(x=>x.id===it.id);if(i>=0)DEMO.items[i]={...DEMO.items[i],...it};return JSON.stringify({success:true});}
@@ -1608,7 +1633,9 @@ async function openReq(rid,canAp){
   const ip=req.status==='รอดำเนินการ';
   ab.style.display=ip&&canAp?'inline-flex':'none';
   rb.style.display=ip&&canAp?'inline-flex':'none';
-  ab.onclick=()=>quickApp(rid);
+  ab.textContent='✅ บันทึกการอนุมัติ';
+  rb.textContent='❌ ปฏิเสธทั้งใบ';
+  ab.onclick=()=>saveApproval(rid);
   rb.onclick=()=>{CM('MReq');openRej(rid);};
   document.getElementById('PdfBtn').onclick=()=>doPDF(rid);
   OM('MReq');
@@ -1627,7 +1654,20 @@ async function openReq(rid,canAp){
     </div>
     ${req.rejReason?`<div class="note-box err">❌ เหตุผลปฏิเสธ: ${req.rejReason}</div>`:''}
     ${req.note&&!req.rejReason?`<div class="note-box">💬 ${req.note}</div>`:''}
-    <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:linear-gradient(90deg,var(--o50),#fff)"><th style="padding:8px 12px">#</th><th style="padding:8px 12px">รายการ</th><th style="padding:8px 12px;text-align:center">หน่วย</th><th style="padding:8px 12px;text-align:center">จำนวนขอ</th><th style="padding:8px 12px;text-align:center">อนุมัติ</th></tr></thead><tbody>${dets.map((d,i)=>`<tr style="${i%2?'background:var(--o50)':''}"><td style="padding:8px 12px;color:var(--s300)">${i+1}</td><td style="padding:8px 12px;font-weight:700">${d.itemName}</td><td style="padding:8px 12px;text-align:center">${d.unit}</td><td style="padding:8px 12px;text-align:center;font-weight:800;color:var(--o700);font-family:'IBM Plex Mono'">${d.qtyRequested}</td><td style="padding:8px 12px;text-align:center;font-weight:800;color:var(--green);font-family:'IBM Plex Mono'">${d.qtyApproved||'–'}</td></tr>`).join('')}</tbody></table>`;
+    ${ip&&canAp?`<div style="background:var(--o50);border:1px solid var(--o100);border-radius:9px;padding:9px 13px;margin-bottom:10px;font-size:11.5px;color:var(--o700)">💡 ปรับจำนวนที่จะอนุมัติต่อรายการได้ (ใส่ 0 = ไม่อนุมัติรายการนั้น) แล้วกด "บันทึกการอนุมัติ"</div>`:''}
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:linear-gradient(90deg,var(--o50),#fff)"><th style="padding:8px 12px">#</th><th style="padding:8px 12px">รายการ</th><th style="padding:8px 12px;text-align:center">หน่วย</th><th style="padding:8px 12px;text-align:center">จำนวนขอ</th><th style="padding:8px 12px;text-align:center">อนุมัติ</th></tr></thead><tbody>${dets.map((d,i)=>`<tr style="${i%2?'background:var(--o50)':''}" data-item-id="${d.itemId}"><td style="padding:8px 12px;color:var(--s300)">${i+1}</td><td style="padding:8px 12px;font-weight:700">${d.itemName}</td><td style="padding:8px 12px;text-align:center">${d.unit}</td><td style="padding:8px 12px;text-align:center;font-weight:800;color:var(--o700);font-family:'IBM Plex Mono'">${d.qtyRequested}</td><td style="padding:8px 12px;text-align:center">${ip&&canAp?`
+      <div style="display:flex;align-items:center;justify-content:center;gap:5px">
+        <input type="number" class="app-qty-input" data-item-id="${d.itemId}" data-max="${d.qtyRequested}" min="0" max="${d.qtyRequested}" value="${d.qtyRequested}" style="width:56px;text-align:center;padding:5px 3px;border:1.5px solid var(--o200);border-radius:6px;font-family:'IBM Plex Mono';font-weight:800;color:var(--green);font-size:12.5px">
+        <button type="button" class="app-zero-btn" data-item-id="${d.itemId}" title="ไม่อนุมัติรายการนี้" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--red);background:#fff;color:var(--red);font-size:11px;cursor:pointer;flex-shrink:0">✕</button>
+      </div>`:`<span style="font-weight:800;color:var(--green);font-family:'IBM Plex Mono'">${d.qtyApproved||'–'}</span>`}</td></tr>`).join('')}</tbody></table>`;
+    if(ip&&canAp){
+      document.querySelectorAll('#MReqB .app-zero-btn').forEach(btn=>{
+        btn.onclick=()=>{
+          const inp=document.querySelector(`#MReqB .app-qty-input[data-item-id="${btn.dataset.itemId}"]`);
+          inp.value = inp.value==='0' ? inp.dataset.max : '0';
+        };
+      });
+    }
   }catch(e){document.getElementById('MReqB').innerHTML=`<p style="color:var(--red);text-align:center;padding:20px">โหลดไม่สำเร็จ: ${e.message}</p>`;}
 }
 
@@ -1639,6 +1679,31 @@ async function quickApp(rid){
     showL(false);
     if(res.success){toast('✅ อนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:''),'ok');CM('MReq');await loadAll();filterAp();}
     else toast('เกิดข้อผิดพลาด','er');
+  }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
+}
+async function saveApproval(rid){
+  const inputs=[...document.querySelectorAll('#MReqB .app-qty-input')];
+  if(!inputs.length){toast('ไม่มีรายการวัสดุ','er');return;}
+  const items=inputs.map(inp=>({
+    itemId:inp.dataset.itemId,
+    qtyApproved:Math.max(0,Math.min(Number(inp.value)||0,Number(inp.dataset.max)))
+  }));
+  const totalApproved=items.reduce((s,i)=>s+i.qtyApproved,0);
+  if(totalApproved<=0){
+    if(confirm('ไม่มีรายการที่อนุมัติเลย ต้องการปฏิเสธใบเบิกทั้งหมดแทนหรือไม่?')){CM('MReq');openRej(rid);}
+    return;
+  }
+  const allFull=items.every(i=>i.qtyApproved===Number(inputs.find(x=>x.dataset.itemId===i.itemId).dataset.max));
+  const msg=allFull
+    ?`ยืนยันอนุมัติใบเบิก ${rid} เต็มจำนวนทุกรายการ?\nระบบจะหักสต็อกอัตโนมัติ`
+    :`ยืนยันอนุมัติใบเบิก ${rid} แบบบางส่วน (${items.filter(i=>i.qtyApproved>0).length}/${items.length} รายการ)?\nระบบจะหักสต็อกตามจำนวนที่อนุมัติเท่านั้น`;
+  if(!confirm(msg))return;
+  showL(true,'กำลังบันทึกการอนุมัติ...');
+  try{
+    const res=JSON.parse(await GS.call('approveRequestItems',JSON.stringify({requestId:rid,items,operator:'Admin'})));
+    showL(false);
+    if(res.success){toast('✅ บันทึกผลการอนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:''),'ok');CM('MReq');await loadAll();filterAp();}
+    else toast('เกิดข้อผิดพลาด: '+(res.error||''),'er');
   }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
 }
 function openRej(rid){CUR_REJ_ID=rid;document.getElementById('RejReason').value='';OM('MRej');}
