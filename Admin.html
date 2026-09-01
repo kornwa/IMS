@@ -1008,6 +1008,7 @@ html,body{overflow-x:hidden;max-width:100%}
   <div class="mb" id="MReqB"></div>
   <div class="mf">
     <button class="btn b-wh b-sm" onclick="CM('MReq')">ปิด</button>
+    <button class="btn b-wh b-sm" id="DiagBtn">🔔 ตรวจสอบแจ้งเตือน</button>
     <button class="btn b-dan b-sm" id="RejBtn" style="display:none">❌ ปฏิเสธ</button>
     <button class="btn b-suc b-sm" id="AppBtn" style="display:none">✅ อนุมัติ</button>
     <button class="btn b-pri b-sm" id="PdfBtn">📄 พิมพ์ PDF</button>
@@ -1154,6 +1155,16 @@ function demoFn(fn, ...args) {
     return JSON.stringify({fiscalYear:fy,totalRequests:fr.length,byQuarter:byQ,quarterLabels:Q_LABELS,byDept,byStatus:byS,topItems,lowStock:DEMO.items.filter(i=>Number(i.qty)<=Number(i.minQty)),pendingCount:byS['รอดำเนินการ']||0,byQuarterDept});
   }
   if (fn==='getAvailableFiscalYears') return JSON.stringify([2568]);
+  if (fn==='diagnoseRequestNotify') {
+    const requestId=args[0];
+    return JSON.stringify({requestId,ok:true,summary:'(โหมดทดลอง/Demo — ไม่มีการเชื่อมต่อ LINE จริง)',checks:[
+      {label:'พบใบเบิกในระบบ',pass:true,note:''},
+      {label:'เปิดใช้งานแจ้งเตือน LINE โดยรวม',pass:true,note:'โหมด Demo'},
+      {label:'ตั้งค่า Channel Access Token แล้ว',pass:true,note:'โหมด Demo'},
+      {label:'พบผู้เบิกในชีต Users',pass:true,note:'โหมด Demo'},
+      {label:'ผู้เบิกลงทะเบียน LINE แล้ว',pass:true,note:'โหมด Demo'}
+    ]});
+  }
   if (fn==='approveRequest') {const{requestId}=JSON.parse(args[0]);const r=DEMO.reqs.find(x=>x.requestId===requestId);if(r){r.status='อนุมัติ';r.approvedBy='Admin';}return JSON.stringify({success:true});}
   if (fn==='bulkApproveRequests') {const{requestIds}=JSON.parse(args[0]);const results=requestIds.map(rid=>{const r=DEMO.reqs.find(x=>x.requestId===rid);if(r&&r.status==='รอดำเนินการ'){r.status='อนุมัติ';r.approvedBy='Admin';return{requestId:rid,success:true};}return{requestId:rid,success:false};});return JSON.stringify({success:true,results});}
   if (fn==='rejectRequest') {const{requestId,reason}=JSON.parse(args[0]);const r=DEMO.reqs.find(x=>x.requestId===requestId);if(r){r.status='ปฏิเสธ';r.rejReason=reason;}return JSON.stringify({success:true});}
@@ -1638,6 +1649,7 @@ async function openReq(rid,canAp){
   ab.onclick=()=>saveApproval(rid);
   rb.onclick=()=>{CM('MReq');openRej(rid);};
   document.getElementById('PdfBtn').onclick=()=>doPDF(rid);
+  document.getElementById('DiagBtn').onclick=()=>diagLine(rid);
   OM('MReq');
   try{
     const dets=JSON.parse(await GS.call('getRequestDetails',rid));
@@ -1671,15 +1683,36 @@ async function openReq(rid,canAp){
   }catch(e){document.getElementById('MReqB').innerHTML=`<p style="color:var(--red);text-align:center;padding:20px">โหลดไม่สำเร็จ: ${e.message}</p>`;}
 }
 
+// ── สรุปสถานะแจ้งเตือนเป็นข้อความสั้นๆ ต่อท้าย toast ──
+function notifySuffix(notifyInfo){
+  if(!notifyInfo) return '';
+  if(notifyInfo.errors && notifyInfo.errors.length) return ` ⚠️ แจ้งเตือน: ${notifyInfo.errors[0]}`;
+  const parts=[];
+  if(notifyInfo.sentToUser===true) parts.push('แจ้งผู้เบิกแล้ว');
+  if(notifyInfo.userHasLineId===false) parts.push('ผู้เบิกยังไม่ผูก LINE');
+  if(notifyInfo.sentToAdmin===true) parts.push('แจ้งแอดมินแล้ว');
+  return parts.length?` (🔔 ${parts.join(', ')})`:'';
+}
+
 async function quickApp(rid){
   if(!confirm(`อนุมัติใบเบิก ${rid}?\nระบบจะหักสต็อกอัตโนมัติ`))return;
   showL(true,'กำลังอนุมัติ...');
   try{
     const res=JSON.parse(await GS.call('approveRequest',JSON.stringify({requestId:rid,operator:'Admin'})));
     showL(false);
-    if(res.success){toast('✅ อนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:''),'ok');CM('MReq');await loadAll();filterAp();}
+    if(res.success){toast('✅ อนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:'')+notifySuffix(res.notifyInfo),'ok');CM('MReq');await loadAll();filterAp();}
     else toast('เกิดข้อผิดพลาด','er');
   }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
+}
+
+async function diagLine(rid){
+  showL(true,'กำลังตรวจสอบ...');
+  try{
+    const d=JSON.parse(await GS.call('diagnoseRequestNotify',rid));
+    showL(false);
+    const lines=d.checks.map(c=>`${c.pass?'✅':'❌'} ${c.label}${c.note?' — '+c.note:''}`).join('\n');
+    alert(`ผลตรวจสอบการแจ้งเตือน (${rid})\n\n${lines}\n\n${d.summary}`);
+  }catch(e){showL(false);toast('ตรวจสอบไม่สำเร็จ: '+e.message,'er');}
 }
 async function saveApproval(rid){
   const inputs=[...document.querySelectorAll('#MReqB .app-qty-input')];
@@ -1702,7 +1735,7 @@ async function saveApproval(rid){
   try{
     const res=JSON.parse(await GS.call('approveRequestItems',JSON.stringify({requestId:rid,items,operator:'Admin'})));
     showL(false);
-    if(res.success){toast('✅ บันทึกผลการอนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:''),'ok');CM('MReq');await loadAll();filterAp();}
+    if(res.success){toast('✅ บันทึกผลการอนุมัติสำเร็จ'+(res.warning?` ⚠️ ${res.warning}`:'')+notifySuffix(res.notifyInfo),'ok');CM('MReq');await loadAll();filterAp();}
     else toast('เกิดข้อผิดพลาด: '+(res.error||''),'er');
   }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
 }
@@ -1711,7 +1744,7 @@ async function doReject(){
   const reason=document.getElementById('RejReason').value.trim();
   if(!reason){toast('กรุณาระบุเหตุผล','er');return;}
   showL(true,'กำลังดำเนินการ...');
-  try{await GS.call('rejectRequest',JSON.stringify({requestId:CUR_REJ_ID,reason,operator:'Admin'}));showL(false);toast('ปฏิเสธใบเบิกแล้ว','in');CM('MRej');await loadAll();filterAp();}
+  try{const res=JSON.parse(await GS.call('rejectRequest',JSON.stringify({requestId:CUR_REJ_ID,reason,operator:'Admin'})));showL(false);toast('ปฏิเสธใบเบิกแล้ว'+notifySuffix(res.notifyInfo),'in');CM('MRej');await loadAll();filterAp();}
   catch(e){showL(false);toast('เกิดข้อผิดพลาด','er');}
 }
 async function doPDF(rid){
