@@ -184,7 +184,7 @@ function _apiDispatch(body) {
     loginAdmin, loginUser, initSheets,
     getPublicSettings, getBranding, saveBranding, getBrandingSettings, saveBrandingSettings, resetBrandingDefaults, uploadLogoFile, removeLogo,
     getItems, addItem, updateItem, deleteItem, adjustStock, getStockLog, exportItemsCSV, exportRequestsCSV,
-    getRequests, getMyRequests, getRequestDetails, submitRequest, approveRequest, approveRequestItems, bulkApproveRequests, rejectRequest, cancelRequest, generateRequestPDF, adminSubmitRequest,
+    getRequests, getMyRequests, getRequestDetails, submitRequest, approveRequest, approveRequestItems, bulkApproveRequests, rejectRequest, cancelRequest, generateRequestPDF, adminSubmitRequest, diagnoseRequestNotify,
     getUsers, getUserNames, updateUserEmail, toggleUser, deleteUser, updateUserActivity, saveUserLineId, updateUserLineId,
     getSettings, saveSetting, getLineToken, saveLineToken, testLineNotify, validateLineToken, getWebhookUrl,
     getStatistics, getAvailableFiscalYears, getScriptUrl, forceResetAdminPassword,
@@ -925,40 +925,109 @@ function notifyNewRequest(req, dets) {
   }
 }
 
+// ══════════════════════════════════════════════════════════
+//  ✅ PATCHED v5.2.6: notifyRequestStatus
+//  - ไม่คืนค่า undefined อีกต่อไป → คืน object บอกผลชัดเจนว่า
+//    ส่งถึงผู้เบิกไหม / ส่งถึงแอดมินไหม / ถ้าไม่ส่งเพราะอะไร
+//  - Logger.log ละเอียดทุกขั้นตอน เพื่อไล่ดูใน Executions ได้ง่าย
+//  - จับคู่ผู้ใช้ด้วยชื่อ+หน่วยงานแบบ trim ช่องว่างหัวท้ายกันเผลอ
+//    เว้นวรรคเกินจนหาไม่เจอ
+// ══════════════════════════════════════════════════════════
 function notifyRequestStatus(requestId, status, detail) {
-  if (!isLineEnabled()) return;
+  const result = { requestId: requestId, status: status, lineEnabled: false, shouldNotify: false,
+                    userFound: false, userHasLineId: false, sentToUser: false, sentToAdmin: false,
+                    adminIdsConfigured: false, tokenConfigured: false, errors: [] };
+
+  if (!isLineEnabled()) {
+    Logger.log('[notifyRequestStatus] ข้าม: ปิดการแจ้งเตือน LINE ทั้งระบบ (line_notify_enabled=false)');
+    return result;
+  }
+  result.lineEnabled = true;
+
   const statusNotifyMap = { 'อนุมัติ': 'approve', 'อนุมัติบางส่วน': 'approve', 'ปฏิเสธ': 'reject', 'ยกเลิก': 'reject' };
-  if (!_shouldNotify(statusNotifyMap[status] || 'approve')) return;
+  if (!_shouldNotify(statusNotifyMap[status] || 'approve')) {
+    Logger.log('[notifyRequestStatus] ข้าม: ปิดการแจ้งเตือนประเภทนี้ (' + (statusNotifyMap[status] || 'approve') + ') ไว้ในการตั้งค่า');
+    return result;
+  }
+  result.shouldNotify = true;
 
   const req  = rows(SH.REQUESTS).find(r => r.requestId === requestId);
   const dets = rows(SH.DETAIL).filter(d => d.requestId === requestId);
-  if (!req) return;
+  if (!req) {
+    result.errors.push('ไม่พบใบเบิก ' + requestId + ' ในชีต Requests');
+    Logger.log('[notifyRequestStatus] ' + result.errors[0]);
+    return result;
+  }
 
+  result.tokenConfigured = !!_getLineChannelToken();
+  result.adminIdsConfigured = _getAdminLineUserIds().length > 0;
+  if (!result.tokenConfigured) Logger.log('[notifyRequestStatus] ⚠️ ไม่พบ LINE Channel Access Token');
+
+  // ── หาผู้เบิกด้วยชื่อ+หน่วยงาน (ตัดช่องว่างหัวท้ายกันพลาด) ──
+  const normReqName = String(req.requesterName || '').trim();
+  const normReqDept = String(req.department || '').trim();
   const users = rows(SH.USERS);
-  const user  = users.find(u => u.name === req.requesterName && u.department === req.department);
+  const user  = users.find(u =>
+    String(u.name || '').trim() === normReqName &&
+    String(u.department || '').trim() === normReqDept
+  );
+  result.userFound = !!user;
   const lineId = user && user.lineUserId ? String(user.lineUserId).trim() : '';
+  result.userHasLineId = !!(lineId && lineId.startsWith('U'));
 
-  if (lineId && lineId.startsWith('U')) {
+  if (!result.userFound) {
+    result.errors.push('ไม่พบผู้ใช้ "' + normReqName + '" หน่วยงาน "' + normReqDept + '" ในชีต Users (ชื่อ/หน่วยงานอาจสะกดไม่ตรงกับตอนลงทะเบียน)');
+    Logger.log('[notifyRequestStatus] ' + result.errors[result.errors.length - 1]);
+  } else if (!result.userHasLineId) {
+    result.errors.push('ผู้ใช้ "' + normReqName + '" ยังไม่ได้ผูก LINE (ยังไม่พิมพ์ "ลงทะเบียน ชื่อ หน่วยงาน" ในแชทบอท)');
+    Logger.log('[notifyRequestStatus] ' + result.errors[result.errors.length - 1]);
+  }
+
+  if (result.userHasLineId) {
     try {
-      pushLineMessage(lineId, buildFlexStatusUpdate(req, dets, status, detail));
+      const r = pushLineMessage(lineId, buildFlexStatusUpdate(req, dets, status, detail));
+      result.sentToUser = !!(r && r.success);
+      if (!result.sentToUser) result.errors.push('ส่งหาผู้เบิกไม่สำเร็จ: ' + (r && (r.error || r.message) || 'ไม่ทราบสาเหตุ'));
+      Logger.log('[notifyRequestStatus] ส่ง Flex ไปยังผู้เบิก (' + lineId + ') → ' + (result.sentToUser ? 'สำเร็จ' : 'ไม่สำเร็จ: ' + JSON.stringify(r)));
     } catch(e) {
-      Logger.log('Flex user error: ' + e.message);
-      const emojiMap = { 'อนุมัติ':'✅','อนุมัติบางส่วน':'⚠️','ปฏิเสธ':'❌','ยกเลิก':'🚫' };
-      pushLineMessage(lineId, (emojiMap[status] || '📋') + ' ผลใบเบิกของท่าน\n━━━━━━━━━━━━━━━━━━━\n📋 เลขที่: ' + req.requestId + '\n📊 สถานะ: ' + status + (detail ? '\n📝 หมายเหตุ: ' + detail : '') + '\n━━━━━━━━━━━━━━━━━━━');
+      Logger.log('[notifyRequestStatus] Flex user error: ' + e.message + ' → ลอง fallback เป็นข้อความธรรมดา');
+      try {
+        const emojiMap = { 'อนุมัติ':'✅','อนุมัติบางส่วน':'⚠️','ปฏิเสธ':'❌','ยกเลิก':'🚫' };
+        const r2 = pushLineMessage(lineId, (emojiMap[status] || '📋') + ' ผลใบเบิกของท่าน\n━━━━━━━━━━━━━━━━━━━\n📋 เลขที่: ' + req.requestId + '\n📊 สถานะ: ' + status + (detail ? '\n📝 หมายเหตุ: ' + detail : '') + '\n━━━━━━━━━━━━━━━━━━━');
+        result.sentToUser = !!(r2 && r2.success);
+        if (!result.sentToUser) result.errors.push('Fallback ส่งหาผู้เบิกก็ไม่สำเร็จ: ' + (r2 && (r2.error || r2.message) || e.message));
+      } catch(e2) {
+        result.errors.push('ส่งหาผู้เบิกล้มเหลวทั้งแบบ Flex และ fallback: ' + e2.message);
+        Logger.log('[notifyRequestStatus] Fallback user error: ' + e2.message);
+      }
     }
   }
 
   try {
-    pushToAdmins(buildFlexAdminStatusUpdate(req, dets, status, detail));
+    const r3 = pushToAdmins(buildFlexAdminStatusUpdate(req, dets, status, detail));
+    result.sentToAdmin = !!r3;
+    Logger.log('[notifyRequestStatus] ส่ง Flex ไปยังแอดมิน → ' + (result.sentToAdmin ? 'สำเร็จ' : 'ไม่สำเร็จ'));
   } catch(e) {
-    Logger.log('Flex admin status error: ' + e.message);
-    const emojiMap = { 'อนุมัติ':'✅','อนุมัติบางส่วน':'⚠️','ปฏิเสธ':'❌','ยกเลิก':'🚫' };
-    pushToAdmins((emojiMap[status] || '📋') + ' อัปเดตใบเบิก: ' + status +
-      '\n━━━━━━━━━━━━━━━━━━━\n📋 เลขที่: ' + req.requestId +
-      '\n👤 ผู้เบิก: ' + req.requesterName + ' (' + req.department + ')' +
-      '\n📊 สถานะ: ' + status + (detail ? '\n📝 รายละเอียด: ' + detail : '') +
-      '\n✍️ ดำเนินการโดย: ' + (req.approvedBy || '–') + '\n━━━━━━━━━━━━━━━━━━━');
+    Logger.log('[notifyRequestStatus] Flex admin status error: ' + e.message + ' → ลอง fallback เป็นข้อความธรรมดา');
+    try {
+      const emojiMap = { 'อนุมัติ':'✅','อนุมัติบางส่วน':'⚠️','ปฏิเสธ':'❌','ยกเลิก':'🚫' };
+      const r4 = pushToAdmins((emojiMap[status] || '📋') + ' อัปเดตใบเบิก: ' + status +
+        '\n━━━━━━━━━━━━━━━━━━━\n📋 เลขที่: ' + req.requestId +
+        '\n👤 ผู้เบิก: ' + req.requesterName + ' (' + req.department + ')' +
+        '\n📊 สถานะ: ' + status + (detail ? '\n📝 รายละเอียด: ' + detail : '') +
+        '\n✍️ ดำเนินการโดย: ' + (req.approvedBy || '–') + '\n━━━━━━━━━━━━━━━━━━━');
+      result.sentToAdmin = !!r4;
+      if (!result.sentToAdmin) result.errors.push('ส่งหาแอดมินไม่สำเร็จทั้งแบบ Flex และ fallback');
+    } catch(e2) {
+      result.errors.push('ส่งหาแอดมินล้มเหลวทั้งแบบ Flex และ fallback: ' + e2.message);
+      Logger.log('[notifyRequestStatus] Fallback admin error: ' + e2.message);
+    }
   }
+
+  if (!result.sentToAdmin && !result.tokenConfigured) result.errors.push('ไม่ได้ตั้งค่า LINE Channel Access Token — ระบบส่งแจ้งเตือนไม่ได้เลย');
+  if (!result.sentToAdmin && result.tokenConfigured && !result.adminIdsConfigured) result.errors.push('ยังไม่ได้ตั้งค่า LINE User ID ของแอดมิน (line_admin_user_ids) — จะ broadcast แทน ถ้าไม่มีคนติดตามจะไม่มีใครได้รับ');
+
+  return result;
 }
 
 function notifyLowStock(lowItems) {
@@ -1477,9 +1546,10 @@ function approveRequest(json) {
   });
   const finalStatus = stockError ? 'อนุมัติบางส่วน' : 'อนุมัติ';
   setRow(SH.REQUESTS, 'requestId', requestId, { status: finalStatus, approvedBy: operator || 'Admin', approvedAt: now(), note: notes || '' });
-  try { notifyRequestStatus(requestId, finalStatus, stockError || notes || ''); } catch(e) {}
+  let notifyInfo = null;
+  try { notifyInfo = notifyRequestStatus(requestId, finalStatus, stockError || notes || ''); } catch(e) { notifyInfo = { errors: ['notifyRequestStatus พัง: ' + e.message] }; }
   try { sendApprovalEmail(requestId, 'อนุมัติ', stockError); } catch(e) {}
-  return JSON.stringify({ success: true, warning: stockError || null });
+  return JSON.stringify({ success: true, warning: stockError || null, notifyInfo: notifyInfo });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1511,28 +1581,70 @@ function approveRequestItems(json) {
   const rejReasonIfNone = anyApproved ? '' : 'ไม่อนุมัติรายการวัสดุที่ขอเบิกทั้งหมด';
 
   setRow(SH.REQUESTS, 'requestId', requestId, { status: finalStatus, approvedBy: operator || 'Admin', approvedAt: now(), rejReason: rejReasonIfNone });
-  try { notifyRequestStatus(requestId, finalStatus, stockError || rejReasonIfNone || ''); } catch (e) {}
+  let notifyInfo = null;
+  try { notifyInfo = notifyRequestStatus(requestId, finalStatus, stockError || rejReasonIfNone || ''); } catch (e) { notifyInfo = { errors: ['notifyRequestStatus พัง: ' + e.message] }; }
   try { sendApprovalEmail(requestId, finalStatus === 'ปฏิเสธ' ? 'ปฏิเสธ' : 'อนุมัติ', stockError || rejReasonIfNone); } catch (e) {}
 
-  return JSON.stringify({ success: true, warning: stockError || null, status: finalStatus });
+  return JSON.stringify({ success: true, warning: stockError || null, status: finalStatus, notifyInfo: notifyInfo });
 }
 
 function bulkApproveRequests(json) {
   const { requestIds, operator } = JSON.parse(json);
   const results = [];
   requestIds.forEach(rid => {
-    try { const res = JSON.parse(approveRequest(JSON.stringify({ requestId: rid, operator }))); results.push({ requestId: rid, success: res.success, warning: res.warning }); }
+    try { const res = JSON.parse(approveRequest(JSON.stringify({ requestId: rid, operator }))); results.push({ requestId: rid, success: res.success, warning: res.warning, notifyInfo: res.notifyInfo }); }
     catch(e) { results.push({ requestId: rid, success: false, error: e.message }); }
   });
   return JSON.stringify({ success: true, results });
 }
 
+// ══════════════════════════════════════════════════════════
+//  ✅ NEW: diagnoseRequestNotify — เช็คสาเหตุที่แจ้งเตือนไม่มา
+//  โดยไม่ต้องเปลี่ยนสถานะใบเบิกจริง (ปลอดภัย เรียกได้ตลอด)
+//  เรียกจาก Admin Panel ปุ่ม "🔔 ตรวจสอบแจ้งเตือน"
+// ══════════════════════════════════════════════════════════
+function diagnoseRequestNotify(requestId) {
+  const out = { requestId: requestId, checks: [], ok: true };
+  const push = (label, pass, note) => { out.checks.push({ label, pass, note: note || '' }); if (!pass) out.ok = false; };
+
+  const req = rows(SH.REQUESTS).find(r => r.requestId === requestId);
+  if (!req) { push('พบใบเบิกในระบบ', false, 'ไม่พบเลขที่ ' + requestId); return JSON.stringify(out); }
+  push('พบใบเบิกในระบบ', true);
+
+  push('เปิดใช้งานแจ้งเตือน LINE โดยรวม', isLineEnabled(), isLineEnabled() ? '' : 'line_notify_enabled = false ใน Settings');
+
+  const token = _getLineChannelToken();
+  push('ตั้งค่า Channel Access Token แล้ว', !!token, token ? '' : 'ไปที่การตั้งค่า LINE แล้วกรอก Token ให้ครบ');
+
+  const adminIds = _getAdminLineUserIds();
+  push('ตั้งค่า LINE User ID ของแอดมินแล้ว', adminIds.length > 0, adminIds.length > 0 ? adminIds.length + ' คน' : 'ยังไม่ตั้งค่า line_admin_user_ids — จะ broadcast แทน (เสี่ยงไม่มีคนได้รับ)');
+
+  const notifyApprove = String(getSettingValue('line_notify_approve', 'true')) !== 'false';
+  push('เปิดแจ้งเตือน "อนุมัติ/ปฏิเสธ" แล้ว', notifyApprove, notifyApprove ? '' : 'line_notify_approve ถูกปิดไว้');
+
+  const normReqName = String(req.requesterName || '').trim();
+  const normReqDept = String(req.department || '').trim();
+  const users = rows(SH.USERS);
+  const user = users.find(u => String(u.name || '').trim() === normReqName && String(u.department || '').trim() === normReqDept);
+  push('พบผู้เบิกในชีต Users (ชื่อ+หน่วยงานตรงกัน)', !!user, user ? '' : ('ผู้เบิกในใบเบิกคือ "' + normReqName + '" / "' + normReqDept + '" — ไม่พบตรงกันในชีต Users'));
+
+  const lineId = user && user.lineUserId ? String(user.lineUserId).trim() : '';
+  const hasLine = !!(lineId && lineId.startsWith('U'));
+  push('ผู้เบิกลงทะเบียน LINE แล้ว (มี lineUserId)', hasLine, hasLine ? '' : 'ให้ผู้เบิกพิมพ์ "ลงทะเบียน ' + normReqName + ' ' + normReqDept + '" ในแชท LINE บอท');
+
+  out.summary = out.ok
+    ? '✅ ทุกอย่างพร้อม ถ้ายังไม่ได้แจ้งเตือนให้ลองกดปุ่มทดสอบแจ้งเตือนในหน้าตั้งค่า หรือดู Executions log'
+    : '⚠️ พบจุดที่ต้องแก้ไขก่อนการแจ้งเตือนจะทำงานได้';
+  return JSON.stringify(out);
+}
+
 function rejectRequest(json) {
   const { requestId, reason, operator } = JSON.parse(json);
   setRow(SH.REQUESTS, 'requestId', requestId, { status: 'ปฏิเสธ', approvedBy: operator || 'Admin', approvedAt: now(), rejReason: reason || '' });
-  try { notifyRequestStatus(requestId, 'ปฏิเสธ', reason || ''); } catch(e) {}
+  let notifyInfo = null;
+  try { notifyInfo = notifyRequestStatus(requestId, 'ปฏิเสธ', reason || ''); } catch(e) { notifyInfo = { errors: ['notifyRequestStatus พัง: ' + e.message] }; }
   try { sendApprovalEmail(requestId, 'ปฏิเสธ', reason); } catch(e) {}
-  return JSON.stringify({ success: true });
+  return JSON.stringify({ success: true, notifyInfo: notifyInfo });
 }
 
 function cancelRequest(json) {
