@@ -919,6 +919,19 @@ html,body{overflow-x:hidden;max-width:100%}
                   </div>
                 </div>
                 <button class="btn b-suc b-sm" onclick="saveLineToken()">💾 บันทึก LINE Token</button>
+
+                <div style="border-top:1px dashed var(--o200);margin:14px 0 10px"></div>
+
+                <div style="font-size:12px;font-weight:700;color:var(--s600);margin-bottom:4px">👥 ส่งเข้ากลุ่ม LINE รวม (ไม่ต้องให้ผู้เบิกลงทะเบียนทีละคน)</div>
+                <div class="channel-help">
+                  แจ้งเตือน "ใบเบิกใหม่" และ "ผลอนุมัติ/ปฏิเสธ" ทั้งหมดจะถูกส่งไปยัง ID ที่ใส่ด้านล่างนี้แทน (ทุกคนในกลุ่มเห็นเหมือนกันหมด ไม่ใช่ส่งส่วนตัว)<br>
+                  📌 <b>วิธีหา Group ID:</b> เชิญบอทเข้ากลุ่ม LINE ที่ต้องการ (ทุกคนในกลุ่มต้อง add เพื่อนบอทด้วย) แล้วพิมพ์ <code style="background:var(--s50);padding:1px 5px;border-radius:3px">ID</code> ในกลุ่มนั้น บอทจะตอบ Group ID กลับมาให้คัดลอก<br>
+                  💡 ใส่ได้หลาย ID คั่นด้วยจุลภาค (,) — รองรับทั้ง User ID (ขึ้นต้น U) และ Group ID (ขึ้นต้น C)
+                </div>
+                <div class="fg" style="margin-bottom:8px">
+                  <textarea class="fc" id="adminLineIds" rows="2" placeholder="เช่น Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;resize:vertical"></textarea>
+                </div>
+                <button class="btn b-suc b-sm" onclick="saveAdminLineIds()">💾 บันทึก ID ปลายทาง</button>
               </div>
 
               <!-- ── Channel 2: Discord Webhook ── -->
@@ -2157,6 +2170,8 @@ async function loadNotifySettings(){
     document.getElementById('NotifyApprove').checked=data.notifyApprove!==false;
     document.getElementById('NotifyReject').checked=data.notifyReject!==false;
     document.getElementById('NotifyLowStock').checked=data.notifyLowStock!==false;
+    const idsBox=document.getElementById('adminLineIds');
+    if(idsBox) idsBox.value=data.adminUserIds||'';
   }catch(e){
     if(box){box.className='notify-status-box err';box.innerHTML='⚠️ โหลดการตั้งค่าไม่สำเร็จ: '+e.message;}
   }
@@ -2195,6 +2210,21 @@ async function saveLineToken(){
       document.getElementById('lineToken').value='';
       await refreshNotifyStatus();
     }else toast(res.message||'บันทึกไม่สำเร็จ','er');
+  }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
+}
+
+// บันทึก LINE User ID / Group ID ปลายทาง (สำหรับประกาศเข้ากลุ่มรวม)
+async function saveAdminLineIds(){
+  const t=document.getElementById('adminLineIds').value.trim();
+  showL(true,'กำลังบันทึก...');
+  try{
+    const raw=await GS.call('saveLineSettings',JSON.stringify({
+      token:'__SKIP__', discordWebhook:'__SKIP__', adminUserIds:t
+    }));
+    const res=typeof raw==='string'?JSON.parse(raw):raw;
+    showL(false);
+    if(res.success) toast('✅ บันทึก ID ปลายทางสำเร็จ','ok');
+    else toast('บันทึกไม่สำเร็จ: '+(res.error||''),'er');
   }catch(e){showL(false);toast('เกิดข้อผิดพลาด: '+e.message,'er');}
 }
 
