@@ -195,8 +195,8 @@ function _apiDispatch(body) {
     getItems, addItem, updateItem, deleteItem, adjustStock, getStockLog, exportItemsCSV, exportRequestsCSV,
     getRequests, getMyRequests, getRequestDetails, submitRequest, approveRequest, approveRequestItems, bulkApproveRequests, rejectRequest, cancelRequest, generateRequestPDF, adminSubmitRequest, diagnoseRequestNotify,
     getUsers, getUserNames, updateUserEmail, toggleUser, deleteUser, updateUserActivity, saveUserLineId, updateUserLineId,
-    getSettings, saveSetting, getLineToken, saveLineToken, testLineNotify, validateLineToken, getWebhookUrl,
-    getStatistics, getAvailableFiscalYears, getScriptUrl, forceResetAdminPassword,
+    getSettings, saveSetting, getLineToken, saveLineToken, testLineNotify, validateLineToken, getWebhookUrl, getLineSettings, saveLineSettings,
+    getStatistics, getAvailableFiscalYears, getScriptUrl, forceResetAdminPassword, forceEnableApproveNotify,
   };
   const fn = API[body.fn];
   if (!fn) return ContentService.createTextOutput(JSON.stringify({ error: 'ไม่อนุญาต: ' + body.fn })).setMimeType(ContentService.MimeType.JSON);
@@ -1960,6 +1960,22 @@ function forceResetAdminPassword() {
   initSheets();
   saveSettingValue('admin_password', '123456');
   return JSON.stringify({ success: true, password: '123456' });
+}
+
+// ══════════════════════════════════════════════════════════
+//  ✅ NEW: forceEnableApproveNotify — เปิดแจ้งเตือน "อนุมัติ/ปฏิเสธ"
+//  กลับคืนทันที โดยไม่ต้องผ่านหน้า Admin Panel
+//  วิธีใช้: เปิด Apps Script Editor → เลือกฟังก์ชันนี้ในดรอปดาวน์ด้านบน
+//  → กด Run (▶) ครั้งเดียว แล้วดูผลใน Execution log
+// ══════════════════════════════════════════════════════════
+function forceEnableApproveNotify() {
+  initSheets();
+  saveSettingValue('line_notify_enabled', 'true');   // เปิดแจ้งเตือน LINE โดยรวม
+  saveSettingValue('line_notify_new', 'true');        // แจ้งเตือนใบเบิกใหม่ (เหมือนเดิม)
+  saveSettingValue('line_notify_approve', 'true');    // ✅ ตัวที่ถูกปิดไปโดยไม่ตั้งใจ — เปิดกลับ
+  saveSettingValue('line_notify_reject', 'true');
+  Logger.log('✅ เปิดแจ้งเตือนอนุมัติ/ปฏิเสธกลับคืนแล้ว — ลองกดอนุมัติใบเบิกทดสอบดูได้เลย');
+  return JSON.stringify({ success: true, message: 'เปิดแจ้งเตือนอนุมัติ/ปฏิเสธกลับคืนแล้ว' });
 }
 
 function getUserNames() {
