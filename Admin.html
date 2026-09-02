@@ -1710,8 +1710,12 @@ async function diagLine(rid){
   try{
     const d=JSON.parse(await GS.call('diagnoseRequestNotify',rid));
     showL(false);
+    if(!d||!Array.isArray(d.checks)||!d.checks.length){
+      alert('ตรวจสอบไม่สำเร็จ: '+(d&&d.error?d.error:'ไม่ทราบสาเหตุ (backend ไม่ตอบรูปแบบที่ถูกต้อง)'));
+      return;
+    }
     const lines=d.checks.map(c=>`${c.pass?'✅':'❌'} ${c.label}${c.note?' — '+c.note:''}`).join('\n');
-    alert(`ผลตรวจสอบการแจ้งเตือน (${rid})\n\n${lines}\n\n${d.summary}`);
+    alert(`ผลตรวจสอบการแจ้งเตือน (${rid})\n\n${lines}\n\n${d.summary||''}`);
   }catch(e){showL(false);toast('ตรวจสอบไม่สำเร็จ: '+e.message,'er');}
 }
 async function saveApproval(rid){
