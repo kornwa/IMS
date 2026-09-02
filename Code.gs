@@ -197,7 +197,7 @@ function _apiDispatch(body) {
     const text = (result === undefined || result === null) ? 'null' : (typeof result === 'string' ? result : JSON.stringify(result));
     return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ error: err.message })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message, checks: [], success: false })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -1604,37 +1604,42 @@ function bulkApproveRequests(json) {
 //  เรียกจาก Admin Panel ปุ่ม "🔔 ตรวจสอบแจ้งเตือน"
 // ══════════════════════════════════════════════════════════
 function diagnoseRequestNotify(requestId) {
-  const out = { requestId: requestId, checks: [], ok: true };
+  const out = { requestId: requestId, checks: [], ok: true, summary: '' };
   const push = (label, pass, note) => { out.checks.push({ label, pass, note: note || '' }); if (!pass) out.ok = false; };
 
-  const req = rows(SH.REQUESTS).find(r => r.requestId === requestId);
-  if (!req) { push('พบใบเบิกในระบบ', false, 'ไม่พบเลขที่ ' + requestId); return JSON.stringify(out); }
-  push('พบใบเบิกในระบบ', true);
+  try {
+    const req = rows(SH.REQUESTS).find(r => r.requestId === requestId);
+    if (!req) { push('พบใบเบิกในระบบ', false, 'ไม่พบเลขที่ ' + requestId); out.summary = '⚠️ ไม่พบใบเบิกนี้ในระบบ'; return JSON.stringify(out); }
+    push('พบใบเบิกในระบบ', true);
 
-  push('เปิดใช้งานแจ้งเตือน LINE โดยรวม', isLineEnabled(), isLineEnabled() ? '' : 'line_notify_enabled = false ใน Settings');
+    push('เปิดใช้งานแจ้งเตือน LINE โดยรวม', isLineEnabled(), isLineEnabled() ? '' : 'line_notify_enabled = false ใน Settings');
 
-  const token = _getLineChannelToken();
-  push('ตั้งค่า Channel Access Token แล้ว', !!token, token ? '' : 'ไปที่การตั้งค่า LINE แล้วกรอก Token ให้ครบ');
+    const token = _getLineChannelToken();
+    push('ตั้งค่า Channel Access Token แล้ว', !!token, token ? '' : 'ไปที่การตั้งค่า LINE แล้วกรอก Token ให้ครบ');
 
-  const adminIds = _getAdminLineUserIds();
-  push('ตั้งค่า LINE User ID ของแอดมินแล้ว', adminIds.length > 0, adminIds.length > 0 ? adminIds.length + ' คน' : 'ยังไม่ตั้งค่า line_admin_user_ids — จะ broadcast แทน (เสี่ยงไม่มีคนได้รับ)');
+    const adminIds = _getAdminLineUserIds();
+    push('ตั้งค่า LINE User ID ของแอดมินแล้ว', adminIds.length > 0, adminIds.length > 0 ? adminIds.length + ' คน' : 'ยังไม่ตั้งค่า line_admin_user_ids — จะ broadcast แทน (เสี่ยงไม่มีคนได้รับ)');
 
-  const notifyApprove = String(getSettingValue('line_notify_approve', 'true')) !== 'false';
-  push('เปิดแจ้งเตือน "อนุมัติ/ปฏิเสธ" แล้ว', notifyApprove, notifyApprove ? '' : 'line_notify_approve ถูกปิดไว้');
+    const notifyApprove = String(getSettingValue('line_notify_approve', 'true')) !== 'false';
+    push('เปิดแจ้งเตือน "อนุมัติ/ปฏิเสธ" แล้ว', notifyApprove, notifyApprove ? '' : 'line_notify_approve ถูกปิดไว้');
 
-  const normReqName = String(req.requesterName || '').trim();
-  const normReqDept = String(req.department || '').trim();
-  const users = rows(SH.USERS);
-  const user = users.find(u => String(u.name || '').trim() === normReqName && String(u.department || '').trim() === normReqDept);
-  push('พบผู้เบิกในชีต Users (ชื่อ+หน่วยงานตรงกัน)', !!user, user ? '' : ('ผู้เบิกในใบเบิกคือ "' + normReqName + '" / "' + normReqDept + '" — ไม่พบตรงกันในชีต Users'));
+    const normReqName = String(req.requesterName || '').trim();
+    const normReqDept = String(req.department || '').trim();
+    const users = rows(SH.USERS);
+    const user = users.find(u => String(u.name || '').trim() === normReqName && String(u.department || '').trim() === normReqDept);
+    push('พบผู้เบิกในชีต Users (ชื่อ+หน่วยงานตรงกัน)', !!user, user ? '' : ('ผู้เบิกในใบเบิกคือ "' + normReqName + '" / "' + normReqDept + '" — ไม่พบตรงกันในชีต Users'));
 
-  const lineId = user && user.lineUserId ? String(user.lineUserId).trim() : '';
-  const hasLine = !!(lineId && lineId.startsWith('U'));
-  push('ผู้เบิกลงทะเบียน LINE แล้ว (มี lineUserId)', hasLine, hasLine ? '' : 'ให้ผู้เบิกพิมพ์ "ลงทะเบียน ' + normReqName + ' ' + normReqDept + '" ในแชท LINE บอท');
+    const lineId = user && user.lineUserId ? String(user.lineUserId).trim() : '';
+    const hasLine = !!(lineId && lineId.startsWith('U'));
+    push('ผู้เบิกลงทะเบียน LINE แล้ว (มี lineUserId)', hasLine, hasLine ? '' : 'ให้ผู้เบิกพิมพ์ "ลงทะเบียน ' + normReqName + ' ' + normReqDept + '" ในแชท LINE บอท');
 
-  out.summary = out.ok
-    ? '✅ ทุกอย่างพร้อม ถ้ายังไม่ได้แจ้งเตือนให้ลองกดปุ่มทดสอบแจ้งเตือนในหน้าตั้งค่า หรือดู Executions log'
-    : '⚠️ พบจุดที่ต้องแก้ไขก่อนการแจ้งเตือนจะทำงานได้';
+    out.summary = out.ok
+      ? '✅ ทุกอย่างพร้อม ถ้ายังไม่ได้แจ้งเตือนให้ลองกดปุ่มทดสอบแจ้งเตือนในหน้าตั้งค่า หรือดู Executions log'
+      : '⚠️ พบจุดที่ต้องแก้ไขก่อนการแจ้งเตือนจะทำงานได้';
+  } catch (e) {
+    push('ตรวจสอบสำเร็จโดยไม่มี error ภายใน', false, 'เกิดข้อผิดพลาดภายในระหว่างตรวจสอบ: ' + e.message);
+    out.summary = '❌ ตรวจสอบไม่สมบูรณ์ — เกิด error ภายใน: ' + e.message;
+  }
   return JSON.stringify(out);
 }
 
