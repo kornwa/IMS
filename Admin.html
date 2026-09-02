@@ -1697,13 +1697,15 @@ async function openReq(rid,canAp){
 }
 
 // ── สรุปสถานะแจ้งเตือนเป็นข้อความสั้นๆ ต่อท้าย toast ──
+// (แสดงผลการแจ้งเตือนกลุ่มปิ๊งป่องเป็นหลัก ไม่สนใจว่าผู้เบิกผูก LINE ส่วนตัวหรือไม่)
 function notifySuffix(notifyInfo){
   if(!notifyInfo) return '';
-  if(notifyInfo.errors && notifyInfo.errors.length) return ` ⚠️ แจ้งเตือน: ${notifyInfo.errors[0]}`;
   const parts=[];
-  if(notifyInfo.sentToUser===true) parts.push('แจ้งผู้เบิกแล้ว');
-  if(notifyInfo.userHasLineId===false) parts.push('ผู้เบิกยังไม่ผูก LINE');
-  if(notifyInfo.sentToAdmin===true) parts.push('แจ้งแอดมินแล้ว');
+  if(notifyInfo.sentToAdmin===true) parts.push('แจ้งกลุ่มปิ๊งป่องแล้ว');
+  else if(notifyInfo.shouldNotify===false) parts.push('ปิดแจ้งเตือนประเภทนี้ไว้ในตั้งค่า');
+  else if(notifyInfo.lineEnabled===false) parts.push('ปิดแจ้งเตือน LINE ไว้ทั้งระบบ');
+  else if(!notifyInfo.tokenConfigured) parts.push('ยังไม่ได้ตั้งค่า LINE Token');
+  else parts.push('แจ้งกลุ่มไม่สำเร็จ ลองกด 🔔 ตรวจสอบแจ้งเตือน');
   return parts.length?` (🔔 ${parts.join(', ')})`:'';
 }
 
