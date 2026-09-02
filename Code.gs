@@ -157,7 +157,16 @@ if (
 }
 
       if (msgText === 'ID' || msgText === 'id' || msgText.toLowerCase() === 'my id') {
-        replyLineMessage(ev.replyToken, '🆔 LINE User ID ของคุณ:\n' + userId + '\n\n(สำหรับ Admin คัดลอกไปตั้งค่าระบบ)');
+        const srcType = ev.source && ev.source.type;
+        let reply = '🆔 LINE User ID ของคุณ:\n' + userId;
+        if (srcType === 'group' && ev.source.groupId) {
+          reply += '\n\n👥 Group ID ของกลุ่มนี้:\n' + ev.source.groupId +
+                   '\n(นำไปวางในช่อง "LINE User ID / Group ID ของแอดมิน" ที่ Admin Panel เพื่อให้ผลอนุมัติ/ปฏิเสธประกาศเข้ากลุ่มนี้)';
+        } else if (srcType === 'room' && ev.source.roomId) {
+          reply += '\n\n👥 Room ID:\n' + ev.source.roomId;
+        }
+        reply += '\n\n(สำหรับ Admin คัดลอกไปตั้งค่าระบบ)';
+        replyLineMessage(ev.replyToken, reply);
         return;
       }
 
@@ -247,9 +256,9 @@ function _getAdminLineUserIds() {
   if (!raw) return [];
   try {
     const arr = JSON.parse(raw);
-    if (Array.isArray(arr)) return arr.map(x => String(x).trim()).filter(x => x.startsWith('U'));
+    if (Array.isArray(arr)) return arr.map(x => String(x).trim()).filter(x => /^[UCR]/.test(x));
   } catch (e) {}
-  return String(raw).split(/[,;\n\r]+/).map(x => x.trim()).filter(x => x.startsWith('U'));
+  return String(raw).split(/[,;\n\r]+/).map(x => x.trim()).filter(x => /^[UCR]/.test(x));
 }
 
 function isLineEnabled() {
@@ -323,8 +332,8 @@ function _sendDiscord(message) {
 function pushLineMessage(userId, message, tokenOverride) {
   if (!isLineEnabled() && !tokenOverride) return { success: false, code: 0, error: 'LINE ปิดอยู่', message: 'LINE ปิดอยู่' };
   const uid = String(userId || '').trim();
-  if (!uid) return { success: false, code: 0, error: 'ไม่พบ User ID', message: 'ไม่พบ User ID' };
-  if (!uid.startsWith('U')) return { success: false, code: 0, error: 'User ID ต้องขึ้นต้นด้วย U', message: 'User ID ต้องขึ้นต้นด้วย U' };
+  if (!uid) return { success: false, code: 0, error: 'ไม่พบ User/Group ID', message: 'ไม่พบ User/Group ID' };
+  if (!/^[UCR]/.test(uid)) return { success: false, code: 0, error: 'ID ต้องขึ้นต้นด้วย U (ผู้ใช้) หรือ C (กลุ่ม)', message: 'ID ต้องขึ้นต้นด้วย U หรือ C' };
   return _callLineApi(LINE_API.PUSH, { to: uid, messages: [_toLineMsg(message)] }, tokenOverride);
 }
 
@@ -342,10 +351,14 @@ function pushToAdmins(message, tokenOverride) {
   const lineToken = _getLineChannelToken(tokenOverride);
   if (lineToken) {
     const ids = _getAdminLineUserIds();
-    if (ids.length === 1) {
-      lineSuccess = pushLineMessage(ids[0], message, tokenOverride).success;
-    } else if (ids.length > 1) {
-      lineSuccess = _callLineApi(LINE_API.MULTICAST, { to: ids, messages: [_toLineMsg(message)] }, tokenOverride).success;
+    if (ids.length > 0) {
+      // ส่งทีละ ID (รองรับทั้ง User ID ส่วนตัว และ Group ID ของกลุ่ม LINE รวม —
+      // LINE Multicast API ไม่รองรับ Group ID เลยส่งทีละรายการแทนเพื่อความชัวร์)
+      ids.forEach(id => {
+        const r = pushLineMessage(id, message, tokenOverride);
+        if (r && r.success) lineSuccess = true;
+        else Logger.log('[pushToAdmins] ส่งหา ' + id + ' ไม่สำเร็จ: ' + (r && (r.error || r.message)));
+      });
     } else {
       lineSuccess = _callLineApi(LINE_API.BROADCAST, { messages: [_toLineMsg(message)] }, tokenOverride).success;
     }
