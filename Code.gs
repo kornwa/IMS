@@ -1630,21 +1630,8 @@ function diagnoseRequestNotify(requestId) {
     const token = _getLineChannelToken();
     push('ตั้งค่า Channel Access Token แล้ว', !!token, token ? '' : 'ไปที่การตั้งค่า LINE แล้วกรอก Token ให้ครบ');
 
-    const adminIds = _getAdminLineUserIds();
-    push('ตั้งค่า LINE User ID ของแอดมินแล้ว', adminIds.length > 0, adminIds.length > 0 ? adminIds.length + ' คน' : 'ยังไม่ตั้งค่า line_admin_user_ids — จะ broadcast แทน (เสี่ยงไม่มีคนได้รับ)');
-
     const notifyApprove = String(getSettingValue('line_notify_approve', 'true')) !== 'false';
     push('เปิดแจ้งเตือน "อนุมัติ/ปฏิเสธ" แล้ว', notifyApprove, notifyApprove ? '' : 'line_notify_approve ถูกปิดไว้');
-
-    const normReqName = String(req.requesterName || '').trim();
-    const normReqDept = String(req.department || '').trim();
-    const users = rows(SH.USERS);
-    const user = users.find(u => String(u.name || '').trim() === normReqName && String(u.department || '').trim() === normReqDept);
-    push('พบผู้เบิกในชีต Users (ชื่อ+หน่วยงานตรงกัน)', !!user, user ? '' : ('ผู้เบิกในใบเบิกคือ "' + normReqName + '" / "' + normReqDept + '" — ไม่พบตรงกันในชีต Users'));
-
-    const lineId = user && user.lineUserId ? String(user.lineUserId).trim() : '';
-    const hasLine = !!(lineId && lineId.startsWith('U'));
-    push('ผู้เบิกลงทะเบียน LINE แล้ว (มี lineUserId)', hasLine, hasLine ? '' : 'ให้ผู้เบิกพิมพ์ "ลงทะเบียน ' + normReqName + ' ' + normReqDept + '" ในแชท LINE บอท');
 
     out.summary = out.ok
       ? '✅ ทุกอย่างพร้อม ถ้ายังไม่ได้แจ้งเตือนให้ลองกดปุ่มทดสอบแจ้งเตือนในหน้าตั้งค่า หรือดู Executions log'
